@@ -1,37 +1,20 @@
-# SoloC Language Guide (v0.1)
+# SoloC language overview
 
-SoloC is SoloGem’s developer language. The syntax is intentionally close to **C#**, with a few SoloC-native conveniences (`fn`, `let`, `print`, top-level scripts).
+SoloC is **SoloGem's** open-source programming language — C#-inspired, beginner-first, MIT licensed. Source files use the **`.sc`** extension.
 
-File extension: `.sc`
+**Tagline:** the easiest language to learn.
 
-## Quick start
+## Start here
+
+- New? Follow the **[learn path](learn/00-welcome.md)** (lessons 00–08)
+- Need a lookup? Use the **[reference](reference/README.md)**
+- Want the *why*? Read **[philosophy](philosophy.md)**
+
+## Quick taste
 
 ```soloc
 print("Hello, SoloC!");
-```
 
-```bash
-dotnet run --project src/SoloC.Cli -- run examples/hello.sc
-```
-
-## Programs
-
-SoloC accepts three program shapes:
-
-1. **Top-level scripts** (statements at file scope)
-2. **Functions** with `fn`
-3. **C#-style classes** with `static void Main()`
-
-### Top-level script
-
-```soloc
-var name = "SoloGem";
-print("hello", name);
-```
-
-### Functions
-
-```soloc
 fn add(int a, int b): int {
     return a + b;
 }
@@ -39,106 +22,51 @@ fn add(int a, int b): int {
 print(add(2, 40));
 ```
 
-### C#-style entry point
-
-```soloc
-class Program {
-    static void Main() {
-        Console.WriteLine("from Main");
-    }
-}
+```bash
+dotnet run --project src/SoloC.Cli -- run examples/hello.sc
 ```
 
-If a file has no top-level statements, SoloC looks for a `Main` function/method and runs it.
+## What SoloC includes
 
-## Types
+| Feature | Docs |
+|---------|------|
+| Top-level scripts | [Learn 01](learn/01-your-first-program.md) |
+| Variables (`var` / `let` / types) | [Learn 02](learn/02-variables.md) · [Types](reference/types.md) |
+| `if` / `else` | [Learn 03](learn/03-decisions.md) |
+| `while` / `for` | [Learn 04](learn/04-loops.md) |
+| Functions (`fn`) | [Learn 05](learn/05-functions.md) |
+| Arrays (`[]`, `.Length`) | [Learn 06](learn/06-arrays.md) |
+| Classes + `Main` | [Learn 07](learn/07-classes.md) |
+| Modules (`using`) | [Modules](reference/modules.md) |
+| `print` / `Console` / `Math` | [Stdlib](reference/stdlib.md) |
+| Friendly errors | [Errors](errors.md) |
+| Type checking | [Types](reference/types.md) |
+| Bytecode VM | [VM](vm.md) (advanced) |
 
-| Type     | Example        |
-|----------|----------------|
-| `int`    | `42`           |
-| `double` | `3.14`         |
-| `bool`   | `true`/`false` |
-| `string` | `"text"`       |
-| `void`   | (no value)     |
-| class    | `new Counter()`|
+## Program shapes
 
-`null` is supported.
+1. **Script** — statements at file scope  
+2. **Functions** — `fn` declarations you call by name  
+3. **Classes** — fields, methods, `this`, and optional `static void Main()`
 
-## Variables
-
-```soloc
-var x = 10;        // mutable, inferred
-let y = 20;        // immutable
-int z = 30;        // mutable, typed
-string s = "hi";
-```
-
-Reassigning a `let` binding is a runtime error.
-
-## Control flow
+## Built-ins at a glance
 
 ```soloc
-if (x > 0) {
-    print("positive");
-} else {
-    print("non-positive");
-}
+print("a", 1);
+Console.WriteLine("b", 2);
 
-while (n > 0) {
-    n = n - 1;
-}
-
-for (var i = 0; i < 10; i = i + 1) {
-    print(i);
-}
+using Math;
+print(max(1, 2));
 ```
-
-## Classes
-
-```soloc
-class Counter {
-    int value = 0;
-
-    void Inc() {
-        this.value = this.value + 1;
-    }
-
-    int Get() {
-        return this.value;
-    }
-}
-
-var c = new Counter();
-c.Inc();
-print(c.Get());
-```
-
-Inside methods, use `this` to read/write fields.
-
-## Built-ins
-
-- `print(...)` — write values separated by spaces, then a newline
-- `Console.WriteLine(...)` — C#-familiar alias for printing
 
 ## Operators
 
-Arithmetic: `+ - * / %`  
-Comparison: `== != < <= > >=`  
-Logical: `&& || !`  
-String concatenation via `+` when either side is a string
+Arithmetic `+ - * / %` · Compare `== != < <= > >=` · Logic `&& || !`
 
-## Comments
+## Learning tools
 
-```soloc
-// line comment
-/* block comment */
-```
+- [Cheat sheet](cheatsheet.md)
+- [Examples](../examples/)
+- [Contributing](../CONTRIBUTING.md)
 
-## What’s next
-
-Planned after v0.1:
-
-- Static type checking before execution
-- Modules / `using`
-- Arrays and generics
-- Bytecode VM + better diagnostics with line/column
+SoloC grows with its learners. Keep programs tiny, read errors kindly, and ship the next `.sc` file.

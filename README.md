@@ -1,24 +1,88 @@
 # SoloC
 
-**SoloGem’s own language for developers** — familiar like C#, lighter to experiment with.
+**The easiest language to learn — made by SoloGem**
 
-SoloC is a C#-inspired language with a toolchain written in C# (.NET 8). v0.1 ships a lexer, parser, AST, tree-walk interpreter, and CLI.
+SoloC is an open-source, C#-inspired programming language designed for absolute beginners. Familiar ideas, simpler rules, and friendly errors. Files use the `.sc` extension.
 
-## Status
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Made by SoloGem](https://img.shields.io/badge/Made%20by-SoloGem-0ea5e9.svg)](docs/philosophy.md)
 
-**v0.1 foundation** — runnable scripts, functions, classes, and a `Main` entry point.
+## 60-second start
 
-## Requirements
-
-- [.NET 8 SDK](https://dotnet.microsoft.com/download)
-
-## Build
+1. Install the [.NET 8 SDK](https://dotnet.microsoft.com/download)
+2. Clone this repo and build:
 
 ```bash
 dotnet build SoloC.sln
 ```
 
-## Run examples
+3. Run your first program:
+
+```bash
+dotnet run --project src/SoloC.Cli -- run examples/hello.sc
+```
+
+Or write `hello.sc`:
+
+```soloc
+print("Hello from SoloC!");
+```
+
+```bash
+dotnet run --project src/SoloC.Cli -- run hello.sc
+```
+
+You're coding. Welcome to SoloC.
+
+## Learn SoloC
+
+Follow the guided path — one small idea per lesson:
+
+**[Start learning →](docs/learn/00-welcome.md)**
+
+| Step | Lesson |
+|------|--------|
+| 00 | [Welcome](docs/learn/00-welcome.md) |
+| 01 | [Your first program](docs/learn/01-your-first-program.md) |
+| 02 | [Variables](docs/learn/02-variables.md) |
+| 03 | [Decisions](docs/learn/03-decisions.md) |
+| 04 | [Loops](docs/learn/04-loops.md) |
+| 05 | [Functions](docs/learn/05-functions.md) |
+| 06 | [Arrays](docs/learn/06-arrays.md) |
+| 07 | [Classes](docs/learn/07-classes.md) |
+| 08 | [Next steps](docs/learn/08-next-steps.md) |
+
+More: [Docs hub](docs/README.md) · [Cheat sheet](docs/cheatsheet.md) · [Language overview](docs/LANGUAGE.md) · [Philosophy](docs/philosophy.md)
+
+## Features
+
+- **Scripts** — top-level statements; no boilerplate required
+- **Functions** — short `fn` definitions
+- **Classes** — C#-style objects with `this` and `Main`
+- **Arrays** — `[]`, indexing, and `.Length`
+- **Modules** — `using` directives (e.g. `using Math;`)
+- **Type checking** — catch mistakes early with clear messages
+- **Bytecode VM** — an efficient runtime for curious learners ([docs/vm.md](docs/vm.md))
+
+## Examples
+
+```soloc
+// Print
+print("Hi,", "SoloGem");
+
+// Function
+fn add(int a, int b): int {
+    return a + b;
+}
+print(add(2, 40));
+
+// Loop
+for (var i = 0; i < 3; i = i + 1) {
+    print(i);
+}
+```
+
+Try the repo samples:
 
 ```bash
 dotnet run --project src/SoloC.Cli -- run examples/hello.sc
@@ -27,47 +91,27 @@ dotnet run --project src/SoloC.Cli -- run examples/counter.sc
 dotnet run --project src/SoloC.Cli -- run examples/main.sc
 ```
 
-Or after build:
-
-```bash
-dotnet src/SoloC.Cli/bin/Debug/net8.0/soloc.dll run examples/hello.sc
-```
-
 ## CLI
 
 ```text
-soloc run <file.sc>     Execute a program
-soloc parse <file.sc>   Parse / validate syntax
+soloc run <file.sc>     Run a program
+soloc parse <file.sc>   Check syntax
 soloc repl              Interactive prompt
 soloc version           Print version
 ```
 
-## Hello, SoloC
+## Open source
 
-```soloc
-print("Hello from SoloC!");
+SoloC is **MIT** licensed — free to use, learn from, and improve. See [LICENSE](LICENSE).
 
-fn greet(string name) {
-    Console.WriteLine("Hey,", name);
-}
-
-greet("SoloGem");
-```
+Created by **SoloGem**. Contributions welcome: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Repository layout
 
 ```text
-src/SoloC.Compiler/   Lexer, parser, AST, interpreter
+src/SoloC.Compiler/   Language implementation
 src/SoloC.Cli/        `soloc` command-line tool
-tests/SoloC.Tests/    Unit tests
+tests/                Tests
 examples/             Sample .sc programs
-docs/LANGUAGE.md      Language guide
+docs/                 Learn path, reference, philosophy
 ```
-
-## Learn more
-
-See [docs/LANGUAGE.md](docs/LANGUAGE.md) for syntax, types, classes, and built-ins.
-
-## License
-
-All rights reserved unless otherwise noted by SoloGem.

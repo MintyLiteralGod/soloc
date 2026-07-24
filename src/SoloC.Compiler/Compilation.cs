@@ -18,12 +18,15 @@ public sealed class Compilation
 {
     public Compilation(string source, string? fileName = null)
     {
-        SourceText = SourceText.From(source, fileName ?? "<source>");
+        var expanded = FileImportExpander.Expand(source, fileName, out var importErrors);
+        ImportErrors = importErrors;
+        SourceText = SourceText.From(expanded, fileName ?? "<source>");
     }
 
     public SourceText SourceText { get; }
     public string Source => SourceText.Text;
     public string FileName => SourceText.FileName;
+    public IReadOnlyList<string> ImportErrors { get; }
 
     public static Compilation FromFile(string path)
     {
@@ -34,12 +37,18 @@ public sealed class Compilation
     public ParseResult Parse()
     {
         var diagnostics = new DiagnosticBag(SourceText);
+        foreach (var error in ImportErrors)
+            diagnostics.Error(error, new TextSpan(0, 0), tip: "Use: using \"helpers.sc\"; next to your file.");
+
         var parser = new Parser(Source, diagnostics);
         var tree = parser.ParseCompilationUnit();
         return new ParseResult(tree, diagnostics.Diagnostics, SourceText);
     }
 
-    public EvaluationResult Evaluate(TextWriter? output = null, ExecutionEngine engine = ExecutionEngine.Auto)
+    public EvaluationResult Evaluate(
+        TextWriter? output = null,
+        ExecutionEngine engine = ExecutionEngine.Auto,
+        TextReader? input = null)
     {
         var parse = Parse();
         var diagnostics = new DiagnosticBag(SourceText);
@@ -58,14 +67,10 @@ public sealed class Compilation
             var vmDiagnostics = new DiagnosticBag(SourceText);
             var compiler = new BytecodeCompiler(SourceText, vmDiagnostics);
             var program = compiler.Compile(parse.Tree);
-            if (program is not null && engine == ExecutionEngine.Vm)
-            {
-                // Strict VM mode: surface compile infos as failures if _failed path returned null already.
-            }
 
             if (program is not null)
             {
-                var vm = new VirtualMachine(output, diagnostics);
+                var vm = new VirtualMachine(output, diagnostics, input);
                 foreach (var member in parse.Tree.Members.OfType<UsingDirectiveSyntax>())
                     vm.ImportModule(member.Name.Text);
 
@@ -83,7 +88,7 @@ public sealed class Compilation
             }
         }
 
-        var interpreter = new Interpreter(output, diagnostics);
+        var interpreter = new Interpreter(output, diagnostics, input);
         var interpreted = interpreter.Interpret(parse.Tree);
         return new EvaluationResult(interpreted, diagnostics.Diagnostics, ExecutionEngine.Interpreter);
     }

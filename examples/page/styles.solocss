@@ -1,0 +1,31 @@
+vars
+  brand #0f2a22
+  accent #d8ff3e
+  paper #f4fff8
+
+body
+  margin 0
+  font "Segoe UI", system-ui, sans-serif
+  background $paper
+  color $brand
+
+.hero
+  padding 4rem
+  background linear-gradient(145deg, $brand, $accent)
+  color $paper
+
+  h1
+    size clamp(2.2rem, 6vw, 3.6rem)
+
+.button
+  display inline-block
+  pad 0.75rem 1.2rem
+  background $accent
+  color $brand
+  radius 0.55rem
+  no-underline
+  bold
+
+footer
+  pad 1.25rem
+  center

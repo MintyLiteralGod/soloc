@@ -7,7 +7,7 @@ public static class SoloRustCompiler
         try
         {
             var program = new SoloRustParser().Parse(source);
-            var rust = new RustEmitter().Emit(program, crateName);
+            var rust = new RustEmitter().Emit(program, crateName, borrowCoach: true);
             return new CompileResult(true, rust, Array.Empty<string>(), Notes);
         }
         catch (SoloRustException ex)

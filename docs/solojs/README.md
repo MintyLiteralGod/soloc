@@ -61,7 +61,9 @@ when ready
 | DOM ready | `when ready` |
 | Events | `on click "#btn"` |
 | Set DOM | `set "#out" text "Hi"` |
-| Runtime helpers | `solo.$`, `solo.on`, `solo.set` bundled in output |
+| Fetch | `fetch "url" into data` (+ optional `catch`) |
+| Timers | `after 500` / `every 1000` |
+| Runtime helpers | `solo.$`, `solo.on`, `solo.set`, `solo.fetch`, `solo.after`, `solo.every` |
 
 ## DOM helpers
 
@@ -73,6 +75,22 @@ when ready
   set "#pane" class "open"
   on click "#save"
     print "saved"
+```
+
+## Fetch + timers
+
+```solojs
+when ready
+  after 300
+    print "delayed hello"
+
+  every 5000
+    print "heartbeat"
+
+  fetch "https://example.com" into data
+    set "#out" text data
+  catch
+    set "#out" text "offline"
 ```
 
 ## Learn path

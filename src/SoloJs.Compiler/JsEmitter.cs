@@ -101,6 +101,47 @@ public sealed class JsEmitter
                 sb.Append(pad).AppendLine("});");
                 break;
 
+            case SoloJsFetch fetch:
+            {
+                var urlExpr = fetch.Url.StartsWith('"') || fetch.Url.StartsWith('\'') || fetch.Url.StartsWith('`')
+                    ? fetch.Url
+                    : JsString(fetch.Url);
+                sb.Append(pad).Append("solo.fetch(").Append(urlExpr).AppendLine(").then(async (__res) => {");
+                sb.Append(pad).AppendLine("  const __data = await __res.text();");
+                if (!string.IsNullOrWhiteSpace(fetch.Into))
+                {
+                    if (declared.Add(fetch.Into!))
+                        sb.Append(pad).Append("  let ").Append(fetch.Into).AppendLine(" = __data;");
+                    else
+                        sb.Append(pad).Append("  ").Append(fetch.Into).AppendLine(" = __data;");
+                }
+                EmitBlock(sb, fetch.ThenBody, depth + 1, declared);
+                sb.Append(pad).Append("})");
+                if (fetch.CatchBody.Count > 0)
+                {
+                    sb.AppendLine(".catch((__err) => {");
+                    EmitBlock(sb, fetch.CatchBody, depth + 1, declared);
+                    sb.Append(pad).AppendLine("});");
+                }
+                else
+                {
+                    sb.AppendLine(";");
+                }
+                break;
+            }
+
+            case SoloJsAfter after:
+                sb.Append(pad).Append("solo.after(").Append(after.DelayMs).AppendLine(", () => {");
+                EmitBlock(sb, after.Body, depth + 1, declared);
+                sb.Append(pad).AppendLine("});");
+                break;
+
+            case SoloJsEvery every:
+                sb.Append(pad).Append("solo.every(").Append(every.IntervalMs).AppendLine(", () => {");
+                EmitBlock(sb, every.Body, depth + 1, declared);
+                sb.Append(pad).AppendLine("});");
+                break;
+
             case SoloJsSet set:
                 sb.Append(pad).Append("solo.set(").Append(JsString(set.Selector)).Append(", ")
                     .Append(JsString(set.Property)).Append(", ").Append(set.Value).AppendLine(");");
@@ -187,6 +228,15 @@ const solo = {
     else if (prop === "value") el.value = value;
     else if (prop === "class") el.className = value;
     else el.setAttribute(prop, value);
+  },
+  fetch(url) {
+    return fetch(url);
+  },
+  after(ms, handler) {
+    return setTimeout(handler, Number(ms));
+  },
+  every(ms, handler) {
+    return setInterval(handler, Number(ms));
   }
 };
 """;

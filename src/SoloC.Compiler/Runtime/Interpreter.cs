@@ -7,12 +7,14 @@ public sealed class Interpreter
 {
     private readonly DiagnosticBag _diagnostics;
     private readonly TextWriter _output;
+    private readonly TextReader _input;
     private readonly SoloEnvironment _globals = new();
     private SoloEnvironment _environment;
 
-    public Interpreter(TextWriter? output = null, DiagnosticBag? diagnostics = null)
+    public Interpreter(TextWriter? output = null, DiagnosticBag? diagnostics = null, TextReader? input = null)
     {
         _output = output ?? Console.Out;
+        _input = input ?? Console.In;
         _diagnostics = diagnostics ?? new DiagnosticBag();
         _environment = _globals;
         InstallBuiltins();
@@ -26,6 +28,16 @@ public sealed class Interpreter
         {
             _output.WriteLine(string.Join(" ", args.Select(a => a.ToString())));
             return SoloValue.Void;
+        })));
+
+        _globals.Define("input", SoloValue.FromNative(new NativeFunction("input", args =>
+        {
+            if (args.Count > 1)
+                throw new RuntimeException("'input' expects 0 or 1 argument (optional prompt).");
+            if (args.Count == 1)
+                _output.Write(args[0].ToString());
+            var line = _input.ReadLine();
+            return SoloValue.FromString(line ?? string.Empty);
         })));
 
         // Console.WriteLine support via a Console object with WriteLine method

@@ -1,0 +1,11 @@
+page Components
+  title SoloHTML components
+  css href=../css/hello.css
+  include components/nav.solohtml
+  hero
+    brand SoloGem
+    h1 Includes + CSS/JS links
+    p Reuse pieces of pages without copy-paste.
+  section
+    p This page pulls in nav via include.
+  js src=../js/hello.js

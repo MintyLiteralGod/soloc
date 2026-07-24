@@ -58,6 +58,15 @@ public sealed class SoloJsParser
                 continue;
             }
 
+            // catch for fetch
+            if (text.Equals("catch", StringComparison.OrdinalIgnoreCase) ||
+                text.Equals("catch:", StringComparison.OrdinalIgnoreCase))
+            {
+                var fetch = FindLastFetch(body, lineNo);
+                stack.Push((indent, fetch.CatchBody));
+                continue;
+            }
+
             var node = ParseStatement(text, lineNo);
             body.Add(node);
 
@@ -70,6 +79,9 @@ public sealed class SoloJsParser
                 case SoloJsForEach fe: stack.Push((indent, fe.Body)); break;
                 case SoloJsWhenReady wr: stack.Push((indent, wr.Body)); break;
                 case SoloJsOn on: stack.Push((indent, on.Body)); break;
+                case SoloJsFetch fetch: stack.Push((indent, fetch.ThenBody)); break;
+                case SoloJsAfter after: stack.Push((indent, after.Body)); break;
+                case SoloJsEvery every: stack.Push((indent, every.Body)); break;
             }
         }
 
@@ -95,6 +107,16 @@ public sealed class SoloJsParser
         return iff;
     }
 
+    private static SoloJsFetch FindLastFetch(List<SoloJsNode> body, int line)
+    {
+        for (var i = body.Count - 1; i >= 0; i--)
+        {
+            if (body[i] is SoloJsFetch fetch)
+                return fetch;
+        }
+        throw new SoloJsException($"line {line}: `catch` without matching `fetch`");
+    }
+
     private static SoloJsNode ParseStatement(string text, int line)
     {
         if (text.StartsWith("fn ", StringComparison.OrdinalIgnoreCase))
@@ -113,6 +135,16 @@ public sealed class SoloJsParser
             text.Equals("ready", StringComparison.OrdinalIgnoreCase) ||
             text.Equals("ready:", StringComparison.OrdinalIgnoreCase))
             return new SoloJsWhenReady { Line = line };
+
+        if (text.StartsWith("fetch ", StringComparison.OrdinalIgnoreCase) ||
+            text.Equals("fetch", StringComparison.OrdinalIgnoreCase))
+            return ParseFetch(text, line);
+
+        if (text.StartsWith("after ", StringComparison.OrdinalIgnoreCase))
+            return ParseAfter(text, line);
+
+        if (text.StartsWith("every ", StringComparison.OrdinalIgnoreCase))
+            return ParseEvery(text, line);
 
         if (text.StartsWith("on ", StringComparison.OrdinalIgnoreCase))
             return ParseOn(text, line);
@@ -140,6 +172,49 @@ public sealed class SoloJsParser
             return new SoloJsAssign { Keyword = keyword, Name = name, Value = value, Line = line };
 
         return new SoloJsExpr { Code = text.TrimEnd(';'), Line = line };
+    }
+
+    private static SoloJsFetch ParseFetch(string text, int line)
+    {
+        // fetch "url" into name
+        // fetch url into name
+        var rest = StripColon(text.Length > 5 ? text[5..].Trim() : "");
+        if (string.IsNullOrWhiteSpace(rest))
+            throw new SoloJsException($"line {line}: fetch needs a URL");
+
+        string url;
+        string? into = null;
+        var intoIdx = rest.IndexOf(" into ", StringComparison.OrdinalIgnoreCase);
+        if (intoIdx >= 0)
+        {
+            url = Unquote(rest[..intoIdx].Trim());
+            into = rest[(intoIdx + 6)..].Trim();
+        }
+        else
+        {
+            url = Unquote(rest);
+        }
+
+        return new SoloJsFetch { Url = url, Into = into, Line = line };
+    }
+
+    private static SoloJsAfter ParseAfter(string text, int line)
+    {
+        // after 500  OR  after 500ms
+        var rest = StripColon(text[5..].Trim());
+        if (string.IsNullOrWhiteSpace(rest))
+            throw new SoloJsException($"line {line}: after needs a delay — try `after 500`");
+        rest = rest.TrimEnd('m', 's', 'M', 'S').Trim();
+        return new SoloJsAfter { DelayMs = rest, Line = line };
+    }
+
+    private static SoloJsEvery ParseEvery(string text, int line)
+    {
+        var rest = StripColon(text[5..].Trim());
+        if (string.IsNullOrWhiteSpace(rest))
+            throw new SoloJsException($"line {line}: every needs an interval — try `every 1000`");
+        rest = rest.TrimEnd('m', 's', 'M', 'S').Trim();
+        return new SoloJsEvery { IntervalMs = rest, Line = line };
     }
 
     private static SoloJsFn ParseFn(string text, int line)

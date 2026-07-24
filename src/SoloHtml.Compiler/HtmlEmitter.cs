@@ -156,18 +156,52 @@ public sealed class HtmlEmitter
         }
 
         sb.AppendLine("  </style>");
+
+        foreach (var css in page.Children.Where(c => c.Tag is "css" or "stylesheet"))
+            EmitStylesheetLink(sb, css, "  ");
+
         sb.AppendLine("</head>");
         sb.AppendLine("<body>");
 
         foreach (var child in page.Children)
         {
-            if (child.Tag is "title" or "meta" or "style")
+            if (child.Tag is "title" or "meta" or "style" or "css" or "stylesheet")
                 continue;
+            if ((child.Tag is "js" or "script") && HasSrc(child))
+                continue; // emit scripts at end of body
             EmitNode(sb, child, 1, title);
         }
 
+        foreach (var js in page.Children.Where(c => (c.Tag is "js" or "script") && HasSrc(c)))
+            EmitScriptTag(sb, js, "  ");
+
         sb.AppendLine("</body>");
         sb.AppendLine("</html>");
+    }
+
+    private static bool HasSrc(SoloHtmlNode node) =>
+        node.Attributes.ContainsKey("src") || !string.IsNullOrWhiteSpace(node.Text);
+
+    private static void EmitStylesheetLink(StringBuilder sb, SoloHtmlNode node, string pad)
+    {
+        var href = node.Attributes.TryGetValue("href", out var h) ? h
+            : node.Attributes.TryGetValue("src", out var s) ? s
+            : node.Text;
+        if (string.IsNullOrWhiteSpace(href))
+            throw new SoloHtmlException($"line {node.Line}: css needs href — try `css href=styles.css`");
+        sb.Append(pad).Append("<link rel=\"stylesheet\" href=\"")
+            .Append(WebUtility.HtmlEncode(href.Trim()))
+            .AppendLine("\" />");
+    }
+
+    private static void EmitScriptTag(StringBuilder sb, SoloHtmlNode node, string pad)
+    {
+        var src = node.Attributes.TryGetValue("src", out var s) ? s : node.Text;
+        if (string.IsNullOrWhiteSpace(src))
+            throw new SoloHtmlException($"line {node.Line}: js needs src — try `js src=app.js`");
+        sb.Append(pad).Append("<script src=\"")
+            .Append(WebUtility.HtmlEncode(src.Trim()))
+            .AppendLine("\"></script>");
     }
 
     private static MappedTag MapTag(SoloHtmlNode node)
@@ -200,6 +234,27 @@ public sealed class HtmlEmitter
                 if (attrs.ContainsKey("href"))
                     return new MappedTag("a", attrs);
                 return new MappedTag("button", attrs);
+            }
+            case "css":
+            case "stylesheet":
+            {
+                // Handled specially in EmitPage; fallback for fragments:
+                if (!attrs.ContainsKey("rel"))
+                    attrs["rel"] = "stylesheet";
+                if (!attrs.ContainsKey("href"))
+                {
+                    if (attrs.TryGetValue("src", out var src))
+                        attrs["href"] = src;
+                    else if (!string.IsNullOrWhiteSpace(node.Text))
+                        attrs["href"] = node.Text!;
+                }
+                return new MappedTag("link", attrs);
+            }
+            case "js":
+            {
+                if (!attrs.ContainsKey("src") && !string.IsNullOrWhiteSpace(node.Text))
+                    attrs["src"] = node.Text!;
+                return new MappedTag("script", attrs);
             }
             case "link":
             case "a":

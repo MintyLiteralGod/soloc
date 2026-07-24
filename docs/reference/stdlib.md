@@ -11,6 +11,15 @@ print("Hello");
 print("score", 42, true);
 ```
 
+## `input`
+
+Reads a line from the console. Optional prompt argument.
+
+```soloc
+var name = input("Your name: ");
+print("Hello,", name);
+```
+
 ## `Console.WriteLine`
 
 C#-familiar printing. Same job as `print` for learning purposes.
@@ -56,4 +65,4 @@ print(a[0]);
 
 ## What isn't here (yet)
 
-SoloC docs intentionally avoid inventing a huge API. If it's not listed here or in the learn path, don't assume it exists — open an issue or PR to propose it.
+SoloC docs intentionally avoid inventing a huge API. File I/O beyond `input`/`print`, networking, and GUIs live in other Solo5 languages (SoloJS / SoloPage). Propose more via PR when it helps beginners.

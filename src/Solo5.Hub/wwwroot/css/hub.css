@@ -1,0 +1,101 @@
+:root {
+  --bg: #07140f;
+  --text: #e9f8ef;
+  --muted: #8fb39f;
+  --accent: #d8ff3e;
+  --card: #10241c;
+  --line: rgba(230, 247, 236, 0.12);
+  --display: "Syne", sans-serif;
+  --body: "Figtree", sans-serif;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text);
+  font-family: var(--body);
+  background: var(--bg);
+}
+.glow {
+  position: fixed; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 55% 40% at 15% 0%, rgba(61,255,194,0.14), transparent 55%),
+    radial-gradient(ellipse 40% 35% at 90% 8%, rgba(216,255,62,0.1), transparent 50%);
+}
+.hero {
+  position: relative;
+  padding: 4.5rem clamp(1.25rem, 5vw, 4rem) 2rem;
+}
+.brand {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(3rem, 10vw, 5.5rem);
+  letter-spacing: -0.05em;
+  line-height: 0.95;
+  animation: rise 700ms ease both;
+}
+.tagline {
+  margin: 0.85rem 0 0;
+  font-size: 1.2rem;
+  max-width: 28ch;
+  animation: rise 700ms ease 80ms both;
+}
+.lead {
+  color: var(--muted);
+  margin: 0.6rem 0 0;
+  animation: rise 700ms ease 140ms both;
+}
+main { position: relative; padding: 0 clamp(1.25rem, 5vw, 4rem) 3rem; }
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.card {
+  display: block;
+  padding: 1.2rem 1.25rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 160ms ease, border-color 160ms ease;
+  animation: rise 700ms ease both;
+}
+.card:hover { transform: translateY(-3px); border-color: rgba(216,255,62,0.35); }
+.card h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+}
+.card .ext { color: var(--accent); font-size: 0.82rem; margin-top: 0.25rem; }
+.card p { margin: 0.55rem 0 0; color: var(--muted); font-size: 0.92rem; }
+.card .port { margin-top: 0.85rem; font-size: 0.78rem; color: var(--muted); }
+.page-block {
+  margin-top: 2.5rem;
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: rgba(16,36,28,0.6);
+}
+.page-block h2 { margin: 0 0 0.4rem; font-family: var(--display); }
+.page-block p { color: var(--muted); margin: 0 0 1rem; }
+pre {
+  margin: 0;
+  padding: 1rem;
+  overflow: auto;
+  background: #0a1812;
+  border-radius: 0.7rem;
+  font-size: 0.85rem;
+}
+footer {
+  padding: 1.5rem clamp(1.25rem, 5vw, 4rem) 2.5rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+footer a { color: var(--accent); }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}

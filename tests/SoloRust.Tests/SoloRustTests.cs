@@ -52,4 +52,18 @@ public class SoloRustTests
         Assert.False(result.Ok);
         Assert.NotEmpty(result.Errors);
     }
+
+    [Fact]
+    public void Emits_borrow_coach_comments()
+    {
+        var result = SoloRustCompiler.Compile(
+            """
+            fn main()
+              let name = "SoloRUST"
+              println "Hi, {name}"
+            """);
+
+        Assert.True(result.Ok, string.Join("; ", result.Errors));
+        Assert.Contains("coach:", result.Rust);
+    }
 }

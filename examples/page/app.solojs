@@ -1,0 +1,6 @@
+when ready
+  print "SoloPage demo ready"
+  after 300
+    set ".hero p" text "Bundled and live — Solo5 SoloPage."
+  every 5000
+    print "still here"

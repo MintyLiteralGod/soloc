@@ -1,0 +1,8 @@
+page Hello SoloPage
+  title Hello SoloPage
+  hero
+    brand SoloGem
+    h1 Bundle the web trio
+    p SoloHTML + SoloCSS + SoloJS → one index.html
+    button primary href=#go Start
+  include components/footer.solohtml

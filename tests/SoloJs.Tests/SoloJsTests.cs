@@ -66,4 +66,26 @@ public class SoloJsTests
         Assert.Contains("else if (score >= 80)", result.JavaScript);
         Assert.Contains("else {", result.JavaScript);
     }
+
+    [Fact]
+    public void Compiles_fetch_and_timers()
+    {
+        var result = SoloJsCompiler.Compile(
+            """
+            after 100
+              print "hi"
+            every 1000
+              print "tick"
+            fetch "https://example.com" into data
+              print data
+            catch
+              print "nope"
+            """);
+
+        Assert.True(result.Ok, string.Join("; ", result.Errors));
+        Assert.Contains("solo.after(100", result.JavaScript);
+        Assert.Contains("solo.every(1000", result.JavaScript);
+        Assert.Contains("solo.fetch(", result.JavaScript);
+        Assert.Contains(".catch(", result.JavaScript);
+    }
 }

@@ -74,6 +74,26 @@ public sealed class SoloJsSet : SoloJsNode
     public required string Value { get; init; }
 }
 
+public sealed class SoloJsFetch : SoloJsNode
+{
+    public required string Url { get; init; }
+    public string? Into { get; init; }
+    public List<SoloJsNode> ThenBody { get; } = [];
+    public List<SoloJsNode> CatchBody { get; } = [];
+}
+
+public sealed class SoloJsAfter : SoloJsNode
+{
+    public required string DelayMs { get; init; }
+    public List<SoloJsNode> Body { get; } = [];
+}
+
+public sealed class SoloJsEvery : SoloJsNode
+{
+    public required string IntervalMs { get; init; }
+    public List<SoloJsNode> Body { get; } = [];
+}
+
 public sealed class SoloJsPrint : SoloJsNode
 {
     public required string Args { get; init; }

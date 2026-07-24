@@ -14,7 +14,7 @@ Start here if you're new. Use the reference when you need a precise answer.
 | SoloJS | [Guide](solojs/README.md) · [Studio](solojs/studio.md) |
 | SoloRUST | [Guide](solorust/README.md) · [Research](solorust/research.md) · [Studio](solorust/studio.md) |
 
-**[Solo5 overview →](solo5/README.md)**
+**[Solo5 overview →](solo5/README.md)** · [SoloPage](solopage/README.md)
 
 ## Start learning SoloC
 

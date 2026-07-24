@@ -7,13 +7,15 @@ public sealed class VirtualMachine
 {
     private readonly DiagnosticBag _diagnostics;
     private readonly TextWriter _output;
+    private readonly TextReader _input;
     private readonly Dictionary<string, SoloValue> _globals = new(StringComparer.Ordinal);
     private readonly SoloValue[] _stack = new SoloValue[256];
     private int _stackTop;
 
-    public VirtualMachine(TextWriter? output = null, DiagnosticBag? diagnostics = null)
+    public VirtualMachine(TextWriter? output = null, DiagnosticBag? diagnostics = null, TextReader? input = null)
     {
         _output = output ?? Console.Out;
+        _input = input ?? Console.In;
         _diagnostics = diagnostics ?? new DiagnosticBag();
         InstallBuiltins();
     }
@@ -43,6 +45,16 @@ public sealed class VirtualMachine
         {
             _output.WriteLine(string.Join(" ", args.Select(a => a.ToString())));
             return SoloValue.Void;
+        }));
+
+        _globals["input"] = SoloValue.FromNative(new NativeFunction("input", args =>
+        {
+            if (args.Count > 1)
+                throw new RuntimeException("'input' expects 0 or 1 argument (optional prompt).");
+            if (args.Count == 1)
+                _output.Write(args[0].ToString());
+            var line = _input.ReadLine();
+            return SoloValue.FromString(line ?? string.Empty);
         }));
     }
 

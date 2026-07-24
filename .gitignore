@@ -25,5 +25,8 @@ Thumbs.db
 .dotnet/
 *.log
 
-## Generated SoloHTML output
+## Generated Solo5 output
 examples/html/*.html
+examples/css/*.css
+examples/js/*.js
+examples/rust/*.rs

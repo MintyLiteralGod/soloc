@@ -1,10 +1,22 @@
-# SoloC documentation
+# SoloGem documentation
 
-Welcome. SoloC is SoloGem's open-source language — made to be the easiest programming language to learn.
+Welcome. **SoloC** is SoloGem's beginner programming language — and the lead language in **[Solo5](solo5/README.md)**, a five-language suite for learning.
 
 Start here if you're new. Use the reference when you need a precise answer.
 
-## Start learning
+## Solo5
+
+| Language | Docs |
+|----------|------|
+| SoloC | [Learn path](learn/00-welcome.md) · [Studio](studio.md) |
+| SoloHTML | [Guide](solohtml/README.md) · [Studio](solohtml/studio.md) |
+| SoloCSS | [Guide](solocss/README.md) · [Studio](solocss/studio.md) |
+| SoloJS | [Guide](solojs/README.md) · [Studio](solojs/studio.md) |
+| SoloRUST | [Guide](solorust/README.md) · [Research](solorust/research.md) · [Studio](solorust/studio.md) |
+
+**[Solo5 overview →](solo5/README.md)**
+
+## Start learning SoloC
 
 | # | Lesson | What you'll do |
 |---|--------|----------------|
@@ -21,8 +33,6 @@ Start here if you're new. Use the reference when you need a precise answer.
 ## Guides
 
 - [SoloC Studio](studio.md) — browser GUI app (editor + Arena + SoloHTML)
-- [SoloHTML](solohtml/README.md) — easiest markup → real HTML5
-- [SoloHTML Studio](solohtml/studio.md) — dedicated SoloHTML GUI (`:5089`) + `solohtml` CLI
 - [Philosophy](philosophy.md) — why SoloC is designed this way
 - [Cheat sheet](cheatsheet.md) — one page of common syntax
 - [Friendly errors](errors.md) — how to read `line:column` messages

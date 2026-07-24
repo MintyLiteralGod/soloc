@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SoloJS Studio — by SoloGem</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+  <div class="glow" aria-hidden="true"></div>
+  <header class="top">
+    <div class="brand-block">
+      <div class="brand">SoloJS</div>
+      <div class="sub">Studio · easiest scripting · Solo5 by SoloGem</div>
+    </div>
+    <div class="actions">
+      <button type="button" id="btn-compile" class="btn primary">Compile</button>
+      <button type="button" id="btn-download" class="btn ghost">Download .js</button>
+    </div>
+  </header>
+  <main class="layout">
+    <aside class="rail">
+      <h2>Demos</h2>
+      <div id="demo-list" class="demo-list"></div>
+      <div class="rail-foot">
+        <p>CLI:</p>
+        <code>solojs compile app.solojs</code>
+      </div>
+    </aside>
+    <section class="editor">
+      <div class="bar">
+        <span id="demo-title">Untitled</span>
+        <span class="hint">Ctrl/Cmd + Enter</span>
+      </div>
+      <textarea id="source" spellcheck="false" aria-label="Source"></textarea>
+    </section>
+    <section class="preview">
+      <div class="bar">
+        <span>Output</span>
+        <span id="meta" class="hint"></span>
+      </div>
+      <pre id="output"></pre><iframe id="frame" title="SoloJS preview" style="min-height:220px;border-top:1px solid var(--line)"></iframe>
+      <pre id="errors" class="errors"></pre>
+      <pre id="notes" class="notes"></pre>
+    </section>
+  </main>
+  <script src="/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+vars
+  ink #122018
+  mist #eef8f2
+  line rgba(16,32,24,0.12)
+  brand #16352c
+  accent #3dffc2
+
+body
+  margin 0
+  background $mist
+  color $ink
+  font "Segoe UI", system-ui, sans-serif
+
+.nav
+  flex
+  align center
+  justify space-between
+  pad 1rem 1.5rem
+  background $brand
+  color white
+
+  a
+    color white
+    no-underline
+    margin 0 0.65rem
+
+.row
+  display grid
+  columns repeat(auto-fit, minmax(220px, 1fr))
+  gap 1rem
+  pad 2rem
+
+.card
+  background white
+  border 1px solid $line
+  radius 1rem
+  pad 1.25rem
+  shadow 0 12px 30px rgba(16,32,24,0.06)
+
+  h3
+    margin 0 0 0.4rem
+
+media max-width 640px
+  .row
+    pad 1rem
+  .nav
+    direction column
+    gap 0.5rem

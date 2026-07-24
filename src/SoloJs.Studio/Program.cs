@@ -20,11 +20,11 @@ app.MapGet("/api/demos/{id}", (string id) =>
 app.MapPost("/api/compile", (CompileRequest request) =>
 {
     var result = SoloJsCompiler.Compile(request.Source ?? string.Empty, request.Title);
-    return Results.Ok(new CompileResponse(result.Ok, result.JavaScript, result.Errors.ToArray()));
+    return Results.Ok(new CompileResponse(result.Ok, result.JavaScript, result.Errors.ToArray(), result.UsesReact));
 });
 
 app.MapFallbackToFile("index.html");
 app.Run();
 
 internal sealed record CompileRequest(string? Source, string? Title);
-internal sealed record CompileResponse(bool Ok, string JavaScript, string[] Errors);
+internal sealed record CompileResponse(bool Ok, string JavaScript, string[] Errors, bool UsesReact);

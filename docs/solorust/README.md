@@ -25,9 +25,14 @@ Open **http://localhost:5092** — edit SoloRUST, see generated `.rs`, download 
 ## Compiler CLI
 
 ```bash
+dotnet run --project src/SoloRust.Cli -- new hello_solo
 dotnet run --project src/SoloRust.Cli -- compile examples/rust/hello.solorust
 dotnet run --project src/SoloRust.Cli -- notes
 ```
+
+`solorust new` writes a Cargo crate (`Cargo.toml` + `src/main.rs`) plus `main.solorust`.
+
+Compiled output includes **borrow coach** comments (`// coach: ...`) that explain ownership in plain language.
 
 Then (optional, requires Rust toolchain):
 

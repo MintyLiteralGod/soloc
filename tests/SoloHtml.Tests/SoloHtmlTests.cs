@@ -63,4 +63,38 @@ public class SoloHtmlTests
         Assert.Contains("center", result.Html);
         Assert.Contains("Hello", result.Html);
     }
+
+    [Fact]
+    public void Include_and_asset_links()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "solohtml-inc-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(root, "components"));
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "components", "nav.solohtml"), """
+                nav
+                  brand SoloGem
+                """);
+            File.WriteAllText(Path.Combine(root, "page.solohtml"), """
+                page Demo
+                  title Demo
+                  css href=app.css
+                  include components/nav.solohtml
+                  h1 Hello
+                  js src=app.js
+                """);
+
+            var result = SoloHtmlCompiler.CompileFile(Path.Combine(root, "page.solohtml"));
+            Assert.True(result.Ok, string.Join("; ", result.Errors));
+            Assert.Contains("rel=\"stylesheet\"", result.Html);
+            Assert.Contains("href=\"app.css\"", result.Html);
+            Assert.Contains("<nav", result.Html);
+            Assert.Contains("SoloGem", result.Html);
+            Assert.Contains("<script src=\"app.js\"", result.Html);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
 }

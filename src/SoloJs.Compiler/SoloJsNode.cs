@@ -3,6 +3,7 @@ namespace SoloJs.Compiler;
 public sealed class SoloJsProgram
 {
     public List<SoloJsNode> Body { get; } = [];
+    public bool UsesReact { get; set; }
 }
 
 public abstract class SoloJsNode
@@ -74,6 +75,26 @@ public sealed class SoloJsSet : SoloJsNode
     public required string Value { get; init; }
 }
 
+public sealed class SoloJsFetch : SoloJsNode
+{
+    public required string Url { get; init; }
+    public string? Into { get; init; }
+    public List<SoloJsNode> ThenBody { get; } = [];
+    public List<SoloJsNode> CatchBody { get; } = [];
+}
+
+public sealed class SoloJsAfter : SoloJsNode
+{
+    public required string DelayMs { get; init; }
+    public List<SoloJsNode> Body { get; } = [];
+}
+
+public sealed class SoloJsEvery : SoloJsNode
+{
+    public required string IntervalMs { get; init; }
+    public List<SoloJsNode> Body { get; } = [];
+}
+
 public sealed class SoloJsPrint : SoloJsNode
 {
     public required string Args { get; init; }
@@ -94,4 +115,39 @@ public sealed class SoloJsAssign : SoloJsNode
 public sealed class SoloJsExpr : SoloJsNode
 {
     public required string Code { get; init; }
+}
+
+public sealed class SoloJsReactEnable : SoloJsNode;
+
+public sealed class SoloJsComponent : SoloJsNode
+{
+    public required string Name { get; init; }
+    public List<SoloJsNode> Body { get; } = [];
+}
+
+public sealed class SoloJsState : SoloJsNode
+{
+    public required string Name { get; init; }
+    public required string Value { get; init; }
+}
+
+public sealed class SoloJsRender : SoloJsNode
+{
+    public List<SoloJsNode> Children { get; } = [];
+}
+
+public sealed class SoloJsElement : SoloJsNode
+{
+    public required string Tag { get; init; }
+    public Dictionary<string, string> Props { get; init; } = new(StringComparer.OrdinalIgnoreCase);
+    public string? Text { get; init; }
+    public string? TextExpr { get; init; }
+    public List<SoloJsNode> Children { get; } = [];
+}
+
+public sealed class SoloJsMount : SoloJsNode
+{
+    public required string Component { get; init; }
+    public required string Selector { get; init; }
+    public Dictionary<string, string> Props { get; init; } = new(StringComparer.OrdinalIgnoreCase);
 }

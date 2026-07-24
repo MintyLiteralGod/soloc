@@ -61,7 +61,10 @@ when ready
 | DOM ready | `when ready` |
 | Events | `on click "#btn"` |
 | Set DOM | `set "#out" text "Hi"` |
-| Runtime helpers | `solo.$`, `solo.on`, `solo.set` bundled in output |
+| Fetch | `fetch "url" into data` (+ optional `catch`) |
+| Timers | `after 500` / `every 1000` |
+| **React** | `component` / `state` / `render` / `mount` → React 18 |
+| Runtime helpers | `solo.$`, `solo.on`, `solo.set`, `solo.fetch`, `solo.after`, `solo.every`, `solo.react.mount` |
 
 ## DOM helpers
 
@@ -74,6 +77,52 @@ when ready
   on click "#save"
     print "saved"
 ```
+
+## Fetch + timers
+
+```solojs
+when ready
+  after 300
+    print "delayed hello"
+
+  every 5000
+    print "heartbeat"
+
+  fetch "https://example.com" into data
+    set "#out" text data
+  catch
+    set "#out" text "offline"
+```
+
+## React (components)
+
+SoloJS compiles to real React 18 (`createElement` + `useState` + `createRoot`).
+
+```solojs
+react
+
+component Counter
+  state count = 0
+
+  fn bump()
+    count = count + 1
+
+  render
+    div.card
+      h1 {count}
+      button onClick=bump "+1"
+
+mount Counter into "#root"
+```
+
+Load React UMD scripts (SoloPage does this automatically when it detects React):
+
+```html
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+```
+
+Try: `examples/js/react-counter.solojs` or `solopage build examples/page-react`
 
 ## Learn path
 

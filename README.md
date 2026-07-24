@@ -17,6 +17,8 @@ SoloC started as an open-source, C#-inspired language for absolute beginners. It
 | **SoloCSS** | `.solocss` | CSS | [localhost:5090](http://localhost:5090) |
 | **SoloJS** | `.solojs` | JavaScript | [localhost:5091](http://localhost:5091) |
 | **SoloRUST** *(experimental)* | `.solorust` | Rust source | [localhost:5092](http://localhost:5092) |
+| **SoloPage** | folder | bundled HTML site | CLI + Hub |
+| **Solo5 Hub** | — | Studio directory | [localhost:5080](http://localhost:5080) |
 
 Full map: **[docs/solo5/README.md](docs/solo5/README.md)**
 
@@ -29,9 +31,10 @@ Full map: **[docs/solo5/README.md](docs/solo5/README.md)**
 dotnet build SoloC.sln
 ```
 
-3. Open a Studio:
+3. Open the **Solo5 Hub** (or any Studio):
 
 ```bash
+dotnet run --project src/Solo5.Hub             # Hub      :5080
 dotnet run --project src/SoloC.Playground     # SoloC     :5088
 dotnet run --project src/SoloHtml.Studio       # SoloHTML  :5089
 dotnet run --project src/SoloCss.Studio        # SoloCSS   :5090
@@ -46,7 +49,8 @@ dotnet run --project src/SoloC.Cli -- run examples/hello.sc
 dotnet run --project src/SoloHtml.Cli -- compile examples/html/showcase.solohtml
 dotnet run --project src/SoloCss.Cli -- compile examples/css/hello.solocss
 dotnet run --project src/SoloJs.Cli -- compile examples/js/hello.solojs
-dotnet run --project src/SoloRust.Cli -- compile examples/rust/hello.solorust
+dotnet run --project src/SoloRust.Cli -- new hello_crate
+dotnet run --project src/SoloPage.Cli -- build examples/page
 ```
 
 ## Learn SoloC
@@ -72,12 +76,14 @@ More: [Docs hub](docs/README.md) · [Cheat sheet](docs/cheatsheet.md) · [Philos
 ## Features
 
 - **Solo5 suite** — SoloC + SoloHTML + SoloCSS + SoloJS + SoloRUST
+- **Solo5 Hub** — one landing page for every Studio (`:5080`)
+- **SoloPage** — bundle HTML+CSS+JS from one folder
 - **Studios for every language** — browser GUIs with demos and download
-- **Dedicated compilers** — `soloc`, `solohtml`, `solocss`, `solojs`, `solorust`
-- **SoloCSS** — vars, nesting, media, friendly property shortcuts
-- **SoloJS** — `print`, `fn`, loops, `when ready`, DOM helpers
-- **SoloRUST** — experimental path into real Rust source ([research](docs/solorust/research.md))
-- **SoloC scripts** — top-level statements; friendly errors; bytecode VM
+- **Dedicated compilers** — `soloc`, `solohtml`, `solocss`, `solojs`, `solorust`, `solopage`
+- **SoloC** — multi-file `using "file.sc"`, `input()`, friendly errors, bytecode VM
+- **SoloHTML** — `include` components, `css` / `js` links
+- **SoloJS** — `fetch`, `after`, `every`, DOM helpers
+- **SoloRUST** — Cargo `new` scaffold + borrow coach comments
 
 ## Examples
 
@@ -119,7 +125,9 @@ src/SoloHtml.*          SoloHTML compiler, CLI, Studio (:5089)
 src/SoloCss.*           SoloCSS compiler, CLI, Studio (:5090)
 src/SoloJs.*            SoloJS compiler, CLI, Studio (:5091)
 src/SoloRust.*          SoloRUST experimental compiler, CLI, Studio (:5092)
+src/SoloPage.*          SoloPage bundler + CLI
+src/Solo5.Hub/          Solo5 Hub (:5080)
 tests/                  Unit tests per language
-examples/               .sc .solohtml .solocss .solojs .solorust samples
+examples/               Samples for every language + SoloPage
 docs/                   Learn path, Solo5 hub, per-language guides
 ```

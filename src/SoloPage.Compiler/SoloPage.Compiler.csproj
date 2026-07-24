@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SoloHtml.Compiler\SoloHtml.Compiler.csproj" />
+    <ProjectReference Include="..\SoloCss.Compiler\SoloCss.Compiler.csproj" />
+    <ProjectReference Include="..\SoloJs.Compiler\SoloJs.Compiler.csproj" />
+  </ItemGroup>
+
+</Project>

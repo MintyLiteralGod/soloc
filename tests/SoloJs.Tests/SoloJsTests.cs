@@ -66,4 +66,58 @@ public class SoloJsTests
         Assert.Contains("else if (score >= 80)", result.JavaScript);
         Assert.Contains("else {", result.JavaScript);
     }
+
+    [Fact]
+    public void Compiles_fetch_and_timers()
+    {
+        var result = SoloJsCompiler.Compile(
+            """
+            after 100
+              print "hi"
+            every 1000
+              print "tick"
+            fetch "https://example.com" into data
+              print data
+            catch
+              print "nope"
+            """);
+
+        Assert.True(result.Ok, string.Join("; ", result.Errors));
+        Assert.Contains("solo.after(100", result.JavaScript);
+        Assert.Contains("solo.every(1000", result.JavaScript);
+        Assert.Contains("solo.fetch(", result.JavaScript);
+        Assert.Contains(".catch(", result.JavaScript);
+    }
+
+    [Fact]
+    public void Compiles_react_component()
+    {
+        var result = SoloJsCompiler.Compile(
+            """
+            react
+
+            component Counter
+              state count = 0
+
+              fn bump()
+                count = count + 1
+
+              render
+                div.card
+                  h1 {count}
+                  p "Clicks so far"
+                  button onClick=bump "+1"
+
+            mount Counter into "#root"
+            """);
+
+        Assert.True(result.Ok, string.Join("; ", result.Errors));
+        Assert.True(result.UsesReact);
+        Assert.Contains("function Counter(props)", result.JavaScript);
+        Assert.Contains("React.useState(0)", result.JavaScript);
+        Assert.Contains("setCount(", result.JavaScript);
+        Assert.Contains("React.createElement", result.JavaScript);
+        Assert.Contains("solo.react.mount(Counter", result.JavaScript);
+        Assert.Contains("onClick: bump", result.JavaScript);
+    }
 }

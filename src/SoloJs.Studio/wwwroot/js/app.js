@@ -27,6 +27,9 @@ async function selectDemo(id) {
   sourceEl.value = demo.source;
   await compile();
 }
+function escapeScript(js) {
+  return js.replace(/<\/script/gi, "<\\/script");
+}
 async function compile() {
   metaEl.textContent = "compiling…";
   const data = await (await fetch("/api/compile", {
@@ -41,24 +44,43 @@ async function compile() {
   errorsEl.textContent = "";
   lastOut = data.javaScript;
   outputEl.textContent = data.javaScript;
-  const interactive = activeId === "dom";
-  frameEl.srcdoc = interactive ? `<!DOCTYPE html><html><body style="font-family:Segoe UI,sans-serif;padding:1.5rem;background:#f4fff8;color:#102018">
-    <h1>SoloJS live</h1>
-    <p id="out">…</p>
-    <p>Score: <strong id="score">0</strong></p>
-    <button id="btn" style="padding:.7rem 1rem;border:0;border-radius:.5rem;background:#d8ff3e;font-weight:700;cursor:pointer">Click me</button>
-    <script>${data.javaScript.replace(/<\/script/gi,'<\\/script')}<\/script>
-  </body></html>` : `<!DOCTYPE html><html><body style="font-family:Segoe UI,sans-serif;padding:1.5rem;background:#102018;color:#e9f8ef">
-    <h1>Console preview</h1>
-    <pre id="log" style="white-space:pre-wrap"></pre>
-    <script>
-      const log = document.getElementById("log");
-      const old = console.log;
-      console.log = (...args) => { log.textContent += args.join(" ") + "\\n"; old(...args); };
-      ${data.javaScript}
-    <\/script>
-  </body></html>`;
-  metaEl.textContent = "live";
+  const js = escapeScript(data.javaScript);
+  if (data.usesReact || activeId === "react") {
+    frameEl.srcdoc = `<!DOCTYPE html><html><head>
+      <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.development.js"><\/script>
+      <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"><\/script>
+      <style>
+        body{font-family:Segoe UI,sans-serif;padding:1.5rem;background:#f4fff8;color:#102018}
+        .card{background:#fff;border:1px solid #d7ebdd;border-radius:16px;padding:1.2rem;max-width:280px}
+        button{margin-top:.75rem;padding:.65rem 1rem;border:0;border-radius:.5rem;background:#d8ff3e;font-weight:700;cursor:pointer}
+        h1{margin:0;font-size:2.4rem}
+      </style>
+    </head><body>
+      <h2>SoloJS + React</h2>
+      <div id="root"></div>
+      <script>${js}<\/script>
+    </body></html>`;
+  } else if (activeId === "dom") {
+    frameEl.srcdoc = `<!DOCTYPE html><html><body style="font-family:Segoe UI,sans-serif;padding:1.5rem;background:#f4fff8;color:#102018">
+      <h1>SoloJS live</h1>
+      <p id="out">…</p>
+      <p>Score: <strong id="score">0</strong></p>
+      <button id="btn" style="padding:.7rem 1rem;border:0;border-radius:.5rem;background:#d8ff3e;font-weight:700;cursor:pointer">Click me</button>
+      <script>${js}<\/script>
+    </body></html>`;
+  } else {
+    frameEl.srcdoc = `<!DOCTYPE html><html><body style="font-family:Segoe UI,sans-serif;padding:1.5rem;background:#102018;color:#e9f8ef">
+      <h1>Console preview</h1>
+      <pre id="log" style="white-space:pre-wrap"></pre>
+      <script>
+        const log = document.getElementById("log");
+        const old = console.log;
+        console.log = (...args) => { log.textContent += args.join(" ") + "\\n"; old(...args); };
+        ${js}
+      <\/script>
+    </body></html>`;
+  }
+  metaEl.textContent = data.usesReact ? "react live" : "live";
 }
 function download() {
   if (!lastOut) return compile().then(() => lastOut && trigger());

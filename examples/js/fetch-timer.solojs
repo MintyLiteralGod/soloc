@@ -1,0 +1,11 @@
+when ready
+  after 200
+    print "timer fired"
+
+  // Demo fetch against a public JSON endpoint (preview may be CORS-limited)
+  fetch "https://httpbin.org/get" into data
+    print "fetched"
+    set "#out" text "Got a response"
+  catch
+    print "fetch failed (ok in offline demos)"
+    set "#out" text "Offline — try again later"

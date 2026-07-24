@@ -60,7 +60,24 @@ page Hello
 | `button primary` | Call-to-action |
 | `list` / `item` | Bulleted list |
 | `#id` / `.class` | IDs and classes |
+| `include nav.solohtml` | Splice in another SoloHTML file |
+| `css href=app.css` | `<link rel="stylesheet">` |
+| `js src=app.js` | `<script src>` at end of body |
 | `// comment` | Ignored |
+
+## Components (`include`)
+
+```solohtml
+page Site
+  title My site
+  include components/nav.solohtml
+  hero
+    h1 Hello
+  css href=styles.css
+  js src=app.js
+```
+
+Paths are resolved relative to the current file. Cycles are rejected.
 
 ## Why SoloHTML?
 

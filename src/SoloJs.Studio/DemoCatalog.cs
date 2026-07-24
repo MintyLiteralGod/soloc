@@ -31,6 +31,24 @@ public static class SoloJsDemoCatalog
                 set "#out" text "Nice click!"
             """),
 
+        new("react", "React counter", "component + state + render + mount.",
+            """
+            react
+
+            component Counter
+              state count = 0
+
+              fn bump()
+                count = count + 1
+
+              render
+                div.card
+                  h1 {count}
+                  button onClick=bump "+1"
+
+            mount Counter into "#root"
+            """),
+
         new("branch", "If / else", "Friendly branching.",
             """
             name = "SoloGem"

@@ -1,0 +1,33 @@
+vars
+  brand #0f2a22
+  accent #d8ff3e
+  paper #f4fff8
+
+body
+  margin 0
+  font "Segoe UI", system-ui, sans-serif
+  background $paper
+  color $brand
+  pad 2rem
+
+.card
+  background white
+  border 1px solid rgba(16,32,24,0.12)
+  radius 1rem
+  pad 1.25rem
+  max-width 280px
+  shadow 0 12px 30px rgba(16,32,24,0.06)
+
+  h1
+    margin 0
+    size 2.4rem
+
+button
+  margin 0.75rem 0 0
+  pad 0.65rem 1rem
+  background $accent
+  color $brand
+  border 0
+  radius 0.5rem
+  weight 700
+  cursor pointer

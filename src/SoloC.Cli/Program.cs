@@ -168,7 +168,7 @@ static int CompileHtml(string[] args)
     }
 
     var source = File.ReadAllText(path);
-    var result = SoloHtmlCompiler.Compile(source);
+    var result = SoloHtmlCompiler.Compile(source, pageTitle: null, basePath: Path.GetDirectoryName(Path.GetFullPath(path)));
     if (!result.Ok)
     {
         foreach (var error in result.Errors)

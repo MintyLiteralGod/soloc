@@ -105,7 +105,7 @@ static (string? Path, string? OutPath, bool Stdout) ParseCompileArgs(string[] ar
 static int CompileOnce(string path, string? outPath, bool stdout, bool quiet)
 {
     var source = File.ReadAllText(path);
-    var result = SoloHtmlCompiler.Compile(source);
+    var result = SoloHtmlCompiler.Compile(source, pageTitle: null, basePath: Path.GetDirectoryName(Path.GetFullPath(path)));
     if (!result.Ok)
     {
         foreach (var error in result.Errors)

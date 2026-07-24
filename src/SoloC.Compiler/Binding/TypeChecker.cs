@@ -20,6 +20,7 @@ public sealed class TypeChecker
         _scopes.Push(new Dictionary<string, SoloType>(StringComparer.Ordinal)
         {
             ["print"] = SoloType.Function,
+            ["input"] = SoloType.Function,
             ["Console"] = SoloType.Class("Console"),
         });
     }

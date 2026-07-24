@@ -1,0 +1,33 @@
+page SoloHTML Showcase
+  title SoloHTML — by SoloGem
+  meta name=description content=The easiest markup language for the web
+
+  hero
+    brand SoloHTML
+    h1 Write pages without angle-bracket pain
+    p SoloGem's markup language. Indent, write words, get real HTML5.
+    button primary href=#features Explore features
+
+  section #features
+    h2 Why SoloHTML?
+    row
+      card
+        h3 Simple
+        p No nested brackets maze. Just indentation and plain tags.
+      card
+        h3 Friendly
+        p Designed for beginners — same spirit as SoloC.
+      card
+        h3 Real HTML
+        p Compiles to clean HTML5 you can ship anywhere.
+
+  section
+    h2 What you get
+    list
+      item page / hero / section shortcuts
+      item card + row layouts
+      item buttons, lists, and links
+      item Built-in lovely default CSS
+
+  footer
+    p Made by SoloGem · SoloHTML is open source

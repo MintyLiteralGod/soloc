@@ -24,3 +24,6 @@ Thumbs.db
 ## Local tools
 .dotnet/
 *.log
+
+## Generated SoloHTML output
+examples/html/*.html

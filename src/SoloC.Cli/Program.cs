@@ -2,6 +2,7 @@
 using SoloC.Compiler.Diagnostics;
 using SoloC.Compiler.Runtime;
 using SoloC.Compiler.Text;
+using SoloHtml.Compiler;
 
 return Run(args);
 
@@ -19,9 +20,12 @@ static int Run(string[] args)
         "run" => RunFile(ParseRunArgs(args)),
         "parse" => ParseFile(RequirePath(args, "parse")),
         "check" => CheckFile(RequirePath(args, "check")),
+        "html" => CompileHtml(args),
         "repl" => RunRepl(),
         "explain" => Explain(args.ElementAtOrDefault(1)),
         "version" or "--version" or "-v" => PrintVersion(),
+        _ when command.EndsWith(".solohtml", StringComparison.OrdinalIgnoreCase) && File.Exists(command)
+            => CompileHtml(["html", command]),
         _ when File.Exists(command) => RunFile((command, ExecutionEngine.Auto)),
         _ => Unknown(command),
     };
@@ -134,6 +138,58 @@ static int CheckFile(string path)
     return 0;
 }
 
+static int CompileHtml(string[] args)
+{
+    // soloc html <file.solohtml> [--out file.html] [--stdout]
+    string? path = null;
+    string? outPath = null;
+    var stdout = false;
+
+    for (var i = 1; i < args.Length; i++)
+    {
+        if (args[i] is "--out" or "-o" && i + 1 < args.Length)
+            outPath = args[++i];
+        else if (args[i] is "--stdout")
+            stdout = true;
+        else if (!args[i].StartsWith('-'))
+            path = args[i];
+    }
+
+    if (path is null)
+    {
+        Console.Error.WriteLine("Usage: soloc html <file.solohtml> [--out file.html]");
+        return 1;
+    }
+
+    if (!File.Exists(path))
+    {
+        Console.Error.WriteLine($"File not found: {path}");
+        return 1;
+    }
+
+    var source = File.ReadAllText(path);
+    var result = SoloHtmlCompiler.Compile(source);
+    if (!result.Ok)
+    {
+        foreach (var error in result.Errors)
+            Console.Error.WriteLine(error);
+        return 1;
+    }
+
+    outPath ??= Path.ChangeExtension(path, ".html");
+    if (stdout)
+    {
+        Console.Write(result.Html);
+    }
+    else
+    {
+        File.WriteAllText(outPath, result.Html);
+        Console.WriteLine($"Wrote {outPath}");
+    }
+
+    return 0;
+}
+
 static int RunRepl()
 {
     Console.WriteLine("SoloC REPL — made by SoloGem");
@@ -205,7 +261,15 @@ static int Explain(string? topic)
             soloc run --engine vm file.sc
             Learn more: docs/vm.md
             """,
-        _ => $"No mini-lesson for '{topic}'. Try: welcome, print, variables, arrays, modules, vm",
+        "html" or "solohtml" => """
+            SoloHTML is SoloGem's easiest markup language.
+            Write indentation-based pages, compile to HTML5:
+
+              soloc html examples/html/hello.solohtml
+
+            Learn more: docs/solohtml/README.md
+            """,
+        _ => $"No mini-lesson for '{topic}'. Try: welcome, print, variables, arrays, modules, vm, html",
     };
 
     Console.WriteLine(text.Trim());
@@ -214,7 +278,7 @@ static int Explain(string? topic)
 
 static int PrintVersion()
 {
-    Console.WriteLine("SoloC 0.2.0 — made by SoloGem (open source, MIT)");
+    Console.WriteLine("SoloC 0.3.0 — made by SoloGem (open source, MIT) · includes SoloHTML");
     return 0;
 }
 
@@ -235,17 +299,20 @@ static void PrintHelp()
           soloc run [--engine auto|vm|interpreter] <file.sc>
           soloc parse <file.sc>
           soloc check <file.sc>
+          soloc html <file.solohtml> [--out file.html]
           soloc explain [topic]
           soloc repl
           soloc version
 
         Learn:
           docs/learn/00-welcome.md
+          docs/solohtml/README.md
           docs/cheatsheet.md
 
         Examples:
           soloc run examples/hello.sc
-          soloc explain arrays
+          soloc html examples/html/showcase.solohtml
+          soloc explain html
           soloc repl
         """);
 }

@@ -20,6 +20,9 @@ Start here if you're new. Use the reference when you need a precise answer.
 
 ## Guides
 
+- [SoloC Studio](studio.md) — browser GUI app (editor + Arena + SoloHTML)
+- [SoloHTML](solohtml/README.md) — easiest markup → real HTML5
+- [SoloHTML Studio](solohtml/studio.md) — dedicated SoloHTML GUI (`:5089`) + `solohtml` CLI
 - [Philosophy](philosophy.md) — why SoloC is designed this way
 - [Cheat sheet](cheatsheet.md) — one page of common syntax
 - [Friendly errors](errors.md) — how to read `line:column` messages

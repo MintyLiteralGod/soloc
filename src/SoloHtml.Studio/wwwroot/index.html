@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SoloHTML Studio — by SoloGem</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+  <div class="glow" aria-hidden="true"></div>
+
+  <header class="top">
+    <div class="brand-block">
+      <div class="brand">SoloHTML</div>
+      <div class="sub">Studio · compiler preview · by SoloGem</div>
+    </div>
+    <div class="actions">
+      <button type="button" id="btn-compile" class="btn primary">Compile</button>
+      <button type="button" id="btn-download" class="btn ghost">Download .html</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="rail">
+      <h2>Demos</h2>
+      <div id="demo-list" class="demo-list"></div>
+      <div class="rail-foot">
+        <p>CLI compiler:</p>
+        <code>solohtml compile page.solohtml</code>
+      </div>
+    </aside>
+
+    <section class="editor">
+      <div class="bar">
+        <span id="demo-title">Untitled</span>
+        <span class="hint">Ctrl/Cmd + Enter to compile</span>
+      </div>
+      <textarea id="source" spellcheck="false" aria-label="SoloHTML source"></textarea>
+    </section>
+
+    <section class="preview">
+      <div class="bar">
+        <span>Live preview</span>
+        <span id="meta" class="hint"></span>
+      </div>
+      <iframe id="frame" title="SoloHTML preview"></iframe>
+      <pre id="errors" class="errors"></pre>
+    </section>
+  </main>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

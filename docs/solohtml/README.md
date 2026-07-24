@@ -4,6 +4,39 @@
 
 File extension: `.solohtml`
 
+## Tools
+
+| Tool | What it is |
+|------|------------|
+| **Compiler CLI** | `src/SoloHtml.Cli` → `solohtml` |
+| **Studio app** | `src/SoloHtml.Studio` → browser GUI at `:5089` |
+| **Compiler library** | `src/SoloHtml.Compiler` |
+
+## SoloHTML Studio (GUI)
+
+```bash
+dotnet run --project src/SoloHtml.Studio
+```
+
+Open **http://localhost:5089**
+
+- Live preview as you type
+- Demo gallery
+- Download compiled `.html`
+
+## Compiler CLI
+
+```bash
+# Compile once
+dotnet run --project src/SoloHtml.Cli -- compile examples/html/hello.solohtml
+
+# Watch + rebuild on save
+dotnet run --project src/SoloHtml.Cli -- watch examples/html/showcase.solohtml
+
+# Print HTML to terminal
+dotnet run --project src/SoloHtml.Cli -- compile examples/html/hello.solohtml --stdout
+```
+
 ## Quick example
 
 ```solohtml
@@ -16,23 +49,7 @@ page Hello
     button primary href=#go Get started
 ```
 
-## Compile
-
-```bash
-dotnet run --project src/SoloC.Cli -- html examples/html/hello.solohtml
-```
-
-Writes `examples/html/hello.html`.
-
-Or open **SoloC Studio → SoloHTML** for a live preview:
-
-```bash
-dotnet run --project src/SoloC.Playground
-```
-
-Visit http://localhost:5088 and click **SoloHTML**.
-
-## Ideas
+## Tag cheat sheet
 
 | You write | You get |
 |-----------|---------|
@@ -40,11 +57,11 @@ Visit http://localhost:5088 and click **SoloHTML**.
 | `hero` | Styled header band |
 | `section` | Page section |
 | `row` + `card` | Responsive card grid |
-| `button primary` | Pretty call-to-action |
+| `button primary` | Call-to-action |
 | `list` / `item` | Bulleted list |
 | `#id` / `.class` | IDs and classes |
 | `// comment` | Ignored |
 
 ## Why SoloHTML?
 
-Same mission as SoloC: remove ceremony. No angle-bracket nesting maze — just indent and write.
+Same mission as SoloC: remove ceremony. No angle-bracket nesting maze — indent and write.

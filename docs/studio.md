@@ -18,3 +18,13 @@ Open **http://localhost:5088**
 - **Arena** — visual fight UI with live HP bars and battle log
 
 No terminal coding required once the app is open.
+
+## SoloHTML-only Studio
+
+For a dedicated SoloHTML app (live preview + download), use:
+
+```bash
+dotnet run --project src/SoloHtml.Studio
+```
+
+Open **http://localhost:5089** — see [SoloHTML Studio](solohtml/studio.md).

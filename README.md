@@ -22,15 +22,27 @@ dotnet build SoloC.sln
 dotnet run --project src/SoloC.Playground
 ```
 
-Then visit [http://localhost:5088](http://localhost:5088) — SoloC Studio, **SoloHTML** live preview, and SoloGem Arena.
+Then visit [http://localhost:5088](http://localhost:5088) — SoloC Studio, SoloHTML preview, and SoloGem Arena.
 
-Or run a script from the CLI:
+### SoloHTML Studio + compiler
+
+```bash
+# GUI studio (live preview)
+dotnet run --project src/SoloHtml.Studio
+# → http://localhost:5089
+
+# Dedicated compiler CLI
+dotnet run --project src/SoloHtml.Cli -- compile examples/html/showcase.solohtml
+dotnet run --project src/SoloHtml.Cli -- watch examples/html/hello.solohtml
+```
+
+Or run a SoloC script from the CLI:
 
 ```bash
 dotnet run --project src/SoloC.Cli -- run examples/hello.sc
 ```
 
-Compile a SoloHTML page:
+Compile SoloHTML via the SoloC CLI too:
 
 ```bash
 dotnet run --project src/SoloC.Cli -- html examples/html/showcase.solohtml
@@ -59,7 +71,9 @@ More: [Docs hub](docs/README.md) · [Cheat sheet](docs/cheatsheet.md) · [Langua
 ## Features
 
 - **SoloC Studio** — browser GUI: SoloC editor, SoloHTML preview, SoloGem Arena
-- **SoloHTML** — indentation markup that compiles to HTML5 ([docs](docs/solohtml/README.md))
+- **SoloHTML** — indentation markup → HTML5 ([docs](docs/solohtml/README.md))
+- **SoloHTML Studio** — dedicated live-preview app (`src/SoloHtml.Studio`)
+- **SoloHTML compiler** — dedicated CLI (`src/SoloHtml.Cli` → `solohtml`)
 - **Scripts** — top-level statements; no boilerplate required
 - **Functions** — short `fn` definitions
 - **Classes** — C#-style objects with `this` and `Main`
@@ -113,9 +127,13 @@ Created by **SoloGem**. Contributions welcome: [CONTRIBUTING.md](CONTRIBUTING.md
 ## Repository layout
 
 ```text
-src/SoloC.Compiler/   Language implementation
-src/SoloC.Cli/        `soloc` command-line tool
-tests/                Tests
-examples/             Sample .sc programs
-docs/                 Learn path, reference, philosophy
+src/SoloC.Compiler/     SoloC language implementation
+src/SoloC.Cli/          `soloc` command-line tool
+src/SoloC.Playground/   SoloC Studio GUI (:5088)
+src/SoloHtml.Compiler/  SoloHTML → HTML5 compiler library
+src/SoloHtml.Cli/       `solohtml` command-line tool
+src/SoloHtml.Studio/    SoloHTML Studio GUI (:5089)
+tests/                  Tests
+examples/               Sample .sc and .solohtml programs
+docs/                   Learn path, reference, philosophy
 ```

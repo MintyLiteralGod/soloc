@@ -45,9 +45,32 @@ public sealed class Parser
         if (Current.Kind == kind)
             return NextToken();
 
-        _diagnostics.Error($"Expected '{kind}' but found '{Current.Kind}'.", Current.Span);
+        _diagnostics.Error(
+            $"Hmm — I expected {FriendlyKind(kind)} here, but found {FriendlyKind(Current.Kind)}.",
+            Current.Span,
+            tip: "Check for a missing character or typo on this line.");
         return new SyntaxToken(kind, string.Empty, null, Current.Span);
     }
+
+    private static string FriendlyKind(SyntaxKind kind) => kind switch
+    {
+        SyntaxKind.IdentifierToken => "a name",
+        SyntaxKind.NumberToken => "a number",
+        SyntaxKind.StringToken => "a string",
+        SyntaxKind.SemicolonToken => "';'",
+        SyntaxKind.OpenBraceToken => "'{'",
+        SyntaxKind.CloseBraceToken => "'}'",
+        SyntaxKind.OpenParenToken => "'('",
+        SyntaxKind.CloseParenToken => "')'",
+        SyntaxKind.OpenBracketToken => "'['",
+        SyntaxKind.CloseBracketToken => "']'",
+        SyntaxKind.CommaToken => "','",
+        SyntaxKind.EqualsToken => "'='",
+        SyntaxKind.EndOfFileToken => "the end of the file",
+        _ => kind.ToString().Replace("Keyword", "", StringComparison.Ordinal)
+            .Replace("Token", "", StringComparison.Ordinal)
+            .ToLowerInvariant(),
+    };
 
     public CompilationUnitSyntax ParseCompilationUnit()
     {
@@ -62,13 +85,16 @@ public sealed class Parser
 
     private MemberSyntax ParseMember()
     {
+        if (Current.Kind == SyntaxKind.UsingKeyword)
+            return ParseUsingDirective();
+
         if (Current.Kind == SyntaxKind.FnKeyword)
             return ParseFunctionDeclaration();
 
         if (Current.Kind == SyntaxKind.ClassKeyword)
             return ParseClassDeclaration();
 
-        if (Current.Kind == SyntaxKind.StaticKeyword || IsTypeToken(Current.Kind))
+        if (Current.Kind == SyntaxKind.StaticKeyword || IsTypeToken(Current.Kind) || Current.Kind == SyntaxKind.IdentifierToken)
         {
             // C#-style: static void Main() / int Foo()
             if (LooksLikeMethodOrField())
@@ -78,10 +104,17 @@ public sealed class Parser
         return new GlobalStatementSyntax(ParseStatement());
     }
 
+    private UsingDirectiveSyntax ParseUsingDirective()
+    {
+        var usingKeyword = Match(SyntaxKind.UsingKeyword);
+        var name = Match(SyntaxKind.IdentifierToken);
+        var semicolon = Match(SyntaxKind.SemicolonToken);
+        return new UsingDirectiveSyntax(usingKeyword, name, semicolon);
+    }
+
     private bool LooksLikeMethodOrField()
     {
-        // static? type ident (  => method
-        // type ident ; or =    => field-like global var (treat as statement)
+        // static? type ([] )? ident (  => method
         var index = 0;
         if (Peek(index).Kind == SyntaxKind.StaticKeyword)
             index++;
@@ -90,6 +123,9 @@ public sealed class Parser
             return false;
 
         index++;
+        if (Peek(index).Kind == SyntaxKind.OpenBracketToken && Peek(index + 1).Kind == SyntaxKind.CloseBracketToken)
+            index += 2;
+
         if (Peek(index).Kind != SyntaxKind.IdentifierToken)
             return false;
 
@@ -194,9 +230,22 @@ public sealed class Parser
     private TypeClauseSyntax ParseTypeClause()
     {
         if (IsTypeToken(Current.Kind) || Current.Kind == SyntaxKind.IdentifierToken)
-            return new TypeClauseSyntax(NextToken());
+        {
+            var typeToken = NextToken();
+            if (Current.Kind == SyntaxKind.OpenBracketToken && Peek(1).Kind == SyntaxKind.CloseBracketToken)
+            {
+                var open = NextToken();
+                var close = NextToken();
+                return new TypeClauseSyntax(typeToken, isArray: true, open, close);
+            }
 
-        _diagnostics.Error($"Expected a type but found '{Current.Kind}'.", Current.Span);
+            return new TypeClauseSyntax(typeToken);
+        }
+
+        _diagnostics.Error(
+            $"I expected a type name here (like int, string, or bool).",
+            Current.Span,
+            tip: "Try writing a type before the variable or parameter name.");
         return new TypeClauseSyntax(new SyntaxToken(SyntaxKind.IdentifierToken, "void", null, Current.Span));
     }
 
@@ -226,15 +275,19 @@ public sealed class Parser
 
     private bool IsTypedVariableStart()
     {
-        // int x = ...;  string name;
+        // int x = ...;  int[] nums = ...;  string name;
         if (!IsTypeToken(Current.Kind) && Current.Kind != SyntaxKind.IdentifierToken)
             return false;
 
         if (Current.Kind == SyntaxKind.VarKeyword || Current.Kind == SyntaxKind.VoidKeyword)
             return Current.Kind == SyntaxKind.VarKeyword;
 
-        return Peek(1).Kind == SyntaxKind.IdentifierToken
-               && Peek(2).Kind is SyntaxKind.EqualsToken or SyntaxKind.SemicolonToken;
+        var index = 1;
+        if (Peek(index).Kind == SyntaxKind.OpenBracketToken && Peek(index + 1).Kind == SyntaxKind.CloseBracketToken)
+            index += 2;
+
+        return Peek(index).Kind == SyntaxKind.IdentifierToken
+               && Peek(index + 1).Kind is SyntaxKind.EqualsToken or SyntaxKind.SemicolonToken;
     }
 
     private BlockStatementSyntax ParseBlockStatement()
@@ -274,7 +327,20 @@ public sealed class Parser
 
     private VariableDeclarationStatementSyntax ParseTypedVariableDeclaration()
     {
-        var type = NextToken();
+        // Keep the first token as KeywordOrType for span/error friendliness;
+        // array brackets are consumed into the type clause separately when present.
+        var typeClause = ParseTypeClause();
+        var typeToken = typeClause.TypeToken;
+        if (typeClause.IsArray)
+        {
+            // Represent array types in KeywordOrType text as "int[]" via a synthetic token.
+            typeToken = new SyntaxToken(
+                typeClause.TypeToken.Kind,
+                typeClause.TypeName,
+                null,
+                typeClause.Span);
+        }
+
         var identifier = Match(SyntaxKind.IdentifierToken);
         SyntaxToken? equals = null;
         ExpressionSyntax? initializer = null;
@@ -287,7 +353,7 @@ public sealed class Parser
 
         var semicolon = Match(SyntaxKind.SemicolonToken);
         return new VariableDeclarationStatementSyntax(
-            type,
+            typeToken,
             identifier,
             equals,
             initializer,
@@ -388,9 +454,12 @@ public sealed class Parser
 
         if (Current.Kind == SyntaxKind.EqualsToken)
         {
-            if (expression is not (NameExpressionSyntax or MemberAccessExpressionSyntax))
+            if (expression is not (NameExpressionSyntax or MemberAccessExpressionSyntax or ElementAccessExpressionSyntax))
             {
-                _diagnostics.Error("Invalid assignment target.", expression.Span);
+                _diagnostics.Error(
+                    "That can't be assigned to.",
+                    expression.Span,
+                    tip: "Assign to a variable name, a field like this.value, or an array slot like nums[0].");
                 return expression;
             }
 
@@ -463,6 +532,8 @@ public sealed class Parser
                 var args = ParseArgumentList();
                 return ParsePostfix(new ObjectCreationExpressionSyntax(newKeyword, typeName, args));
             }
+            case SyntaxKind.OpenBracketToken:
+                return ParsePostfix(ParseArrayLiteral());
             case SyntaxKind.IdentifierToken:
             default:
             {
@@ -470,6 +541,26 @@ public sealed class Parser
                 return ParsePostfix(new NameExpressionSyntax(identifier));
             }
         }
+    }
+
+    private ArrayLiteralExpressionSyntax ParseArrayLiteral()
+    {
+        var open = Match(SyntaxKind.OpenBracketToken);
+        var elements = new List<ExpressionSyntax>();
+
+        if (Current.Kind != SyntaxKind.CloseBracketToken)
+        {
+            do
+            {
+                if (elements.Count > 0)
+                    Match(SyntaxKind.CommaToken);
+
+                elements.Add(ParseExpression());
+            } while (Current.Kind == SyntaxKind.CommaToken);
+        }
+
+        var close = Match(SyntaxKind.CloseBracketToken);
+        return new ArrayLiteralExpressionSyntax(open, elements, close);
     }
 
     private ExpressionSyntax ParsePostfix(ExpressionSyntax expression)
@@ -480,6 +571,15 @@ public sealed class Parser
             {
                 var args = ParseArgumentList();
                 expression = new CallExpressionSyntax(expression, args);
+                continue;
+            }
+
+            if (Current.Kind == SyntaxKind.OpenBracketToken)
+            {
+                var open = NextToken();
+                var index = ParseExpression();
+                var close = Match(SyntaxKind.CloseBracketToken);
+                expression = new ElementAccessExpressionSyntax(expression, open, index, close);
                 continue;
             }
 

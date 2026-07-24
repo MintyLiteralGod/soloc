@@ -153,3 +153,48 @@ public sealed class ObjectCreationExpressionSyntax : ExpressionSyntax
     public override TextSpan Span =>
         new(NewKeyword.Span.Start, ArgumentList.Span.End - NewKeyword.Span.Start);
 }
+
+public sealed class ArrayLiteralExpressionSyntax : ExpressionSyntax
+{
+    public ArrayLiteralExpressionSyntax(
+        SyntaxToken openBracket,
+        IReadOnlyList<ExpressionSyntax> elements,
+        SyntaxToken closeBracket)
+    {
+        OpenBracketToken = openBracket;
+        Elements = elements;
+        CloseBracketToken = closeBracket;
+    }
+
+    public override SyntaxKind Kind => SyntaxKind.ArrayLiteralExpression;
+    public SyntaxToken OpenBracketToken { get; }
+    public IReadOnlyList<ExpressionSyntax> Elements { get; }
+    public SyntaxToken CloseBracketToken { get; }
+
+    public override TextSpan Span =>
+        new(OpenBracketToken.Span.Start, CloseBracketToken.Span.End - OpenBracketToken.Span.Start);
+}
+
+public sealed class ElementAccessExpressionSyntax : ExpressionSyntax
+{
+    public ElementAccessExpressionSyntax(
+        ExpressionSyntax expression,
+        SyntaxToken openBracket,
+        ExpressionSyntax index,
+        SyntaxToken closeBracket)
+    {
+        Expression = expression;
+        OpenBracketToken = openBracket;
+        Index = index;
+        CloseBracketToken = closeBracket;
+    }
+
+    public override SyntaxKind Kind => SyntaxKind.ElementAccessExpression;
+    public ExpressionSyntax Expression { get; }
+    public SyntaxToken OpenBracketToken { get; }
+    public ExpressionSyntax Index { get; }
+    public SyntaxToken CloseBracketToken { get; }
+
+    public override TextSpan Span =>
+        new(Expression.Span.Start, CloseBracketToken.Span.End - Expression.Span.Start);
+}

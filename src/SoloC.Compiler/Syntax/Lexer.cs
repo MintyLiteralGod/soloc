@@ -32,6 +32,7 @@ public sealed class Lexer
         ["new"] = SyntaxKind.NewKeyword,
         ["fn"] = SyntaxKind.FnKeyword,
         ["print"] = SyntaxKind.PrintKeyword,
+        ["using"] = SyntaxKind.UsingKeyword,
     };
 
     public Lexer(string text, DiagnosticBag diagnostics)

@@ -119,7 +119,7 @@ public class InterpreterTests
             """);
         var result = compilation.Evaluate(new StringWriter());
         Assert.False(result.Success);
-        Assert.Contains(result.Diagnostics, d => d.Message.Contains("immutable"));
+        Assert.Contains(result.Diagnostics, d => d.Message.Contains("let", StringComparison.OrdinalIgnoreCase));
     }
 
     private static string Evaluate(string source)

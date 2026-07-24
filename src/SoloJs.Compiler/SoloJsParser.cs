@@ -6,8 +6,8 @@ public sealed class SoloJsParser
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var program = new SoloJsProgram();
-        var stack = new Stack<(int Indent, List<SoloJsNode> Body)>();
-        stack.Push((-1, program.Body));
+        var stack = new Stack<(int Indent, List<SoloJsNode> Body, bool ElementMode)>();
+        stack.Push((-1, program.Body, false));
 
         for (var i = 0; i < lines.Length; i++)
         {
@@ -21,10 +21,6 @@ public sealed class SoloJsParser
 
             if (text.StartsWith("//"))
             {
-                // Keep comments only at current indent level without popping oddly
-                while (stack.Count > 1 && indent < stack.Peek().Indent)
-                    stack.Pop();
-                // comments at same indent as a block header stay in parent — use <= for non-block
                 while (stack.Count > 1 && indent <= stack.Peek().Indent)
                     stack.Pop();
                 stack.Peek().Body.Add(new SoloJsComment { Text = text[2..].Trim(), Line = lineNo });
@@ -34,14 +30,13 @@ public sealed class SoloJsParser
             while (stack.Count > 1 && indent <= stack.Peek().Indent)
                 stack.Pop();
 
-            var body = stack.Peek().Body;
+            var (frameIndent, body, elementMode) = stack.Peek();
 
-            // else / elif fold into previous if
             if (text.Equals("else", StringComparison.OrdinalIgnoreCase) ||
                 text.Equals("else:", StringComparison.OrdinalIgnoreCase))
             {
                 var iff = FindElseTarget(body, lineNo);
-                stack.Push((indent, iff.ElseBody));
+                stack.Push((indent, iff.ElseBody, false));
                 continue;
             }
 
@@ -54,36 +49,60 @@ public sealed class SoloJsParser
                 var parentIf = FindElseTarget(body, lineNo);
                 var nested = new SoloJsIf { Condition = cond, Line = lineNo };
                 parentIf.ElseBody.Add(nested);
-                stack.Push((indent, nested.ThenBody));
+                stack.Push((indent, nested.ThenBody, false));
                 continue;
             }
 
-            // catch for fetch
             if (text.Equals("catch", StringComparison.OrdinalIgnoreCase) ||
                 text.Equals("catch:", StringComparison.OrdinalIgnoreCase))
             {
                 var fetch = FindLastFetch(body, lineNo);
-                stack.Push((indent, fetch.CatchBody));
+                stack.Push((indent, fetch.CatchBody, false));
                 continue;
             }
 
-            var node = ParseStatement(text, lineNo);
+            if (elementMode)
+            {
+                var el = ParseElement(text, lineNo);
+                body.Add(el);
+                stack.Push((indent, el.Children, true));
+                continue;
+            }
+
+            var node = ParseStatement(text, lineNo, program);
             body.Add(node);
 
             switch (node)
             {
-                case SoloJsFn fn: stack.Push((indent, fn.Body)); break;
-                case SoloJsIf iff: stack.Push((indent, iff.ThenBody)); break;
-                case SoloJsWhile wh: stack.Push((indent, wh.Body)); break;
-                case SoloJsForRange fr: stack.Push((indent, fr.Body)); break;
-                case SoloJsForEach fe: stack.Push((indent, fe.Body)); break;
-                case SoloJsWhenReady wr: stack.Push((indent, wr.Body)); break;
-                case SoloJsOn on: stack.Push((indent, on.Body)); break;
-                case SoloJsFetch fetch: stack.Push((indent, fetch.ThenBody)); break;
-                case SoloJsAfter after: stack.Push((indent, after.Body)); break;
-                case SoloJsEvery every: stack.Push((indent, every.Body)); break;
+                case SoloJsFn fn: stack.Push((indent, fn.Body, false)); break;
+                case SoloJsIf iff: stack.Push((indent, iff.ThenBody, false)); break;
+                case SoloJsWhile wh: stack.Push((indent, wh.Body, false)); break;
+                case SoloJsForRange fr: stack.Push((indent, fr.Body, false)); break;
+                case SoloJsForEach fe: stack.Push((indent, fe.Body, false)); break;
+                case SoloJsWhenReady wr: stack.Push((indent, wr.Body, false)); break;
+                case SoloJsOn on: stack.Push((indent, on.Body, false)); break;
+                case SoloJsFetch fetch: stack.Push((indent, fetch.ThenBody, false)); break;
+                case SoloJsAfter after: stack.Push((indent, after.Body, false)); break;
+                case SoloJsEvery every: stack.Push((indent, every.Body, false)); break;
+                case SoloJsComponent comp:
+                    program.UsesReact = true;
+                    stack.Push((indent, comp.Body, false));
+                    break;
+                case SoloJsRender render:
+                    program.UsesReact = true;
+                    stack.Push((indent, render.Children, true));
+                    break;
+                case SoloJsMount:
+                    program.UsesReact = true;
+                    break;
+                case SoloJsReactEnable:
+                    program.UsesReact = true;
+                    break;
             }
         }
+
+        if (program.Body.Any(n => n is SoloJsComponent or SoloJsMount or SoloJsReactEnable))
+            program.UsesReact = true;
 
         return program;
     }
@@ -98,7 +117,6 @@ public sealed class SoloJsParser
         throw new SoloJsException($"line {line}: `else` without matching `if`");
     }
 
-    /// <summary>Walk an if/elif chain to the deepest if that can still take else/elif.</summary>
     private static SoloJsIf FindElseTarget(List<SoloJsNode> body, int line)
     {
         var iff = FindLastIf(body, line);
@@ -117,8 +135,39 @@ public sealed class SoloJsParser
         throw new SoloJsException($"line {line}: `catch` without matching `fetch`");
     }
 
-    private static SoloJsNode ParseStatement(string text, int line)
+    private static SoloJsNode ParseStatement(string text, int line, SoloJsProgram program)
     {
+        if (text is "react" or "react:" || text.Equals("use react", StringComparison.OrdinalIgnoreCase))
+            return new SoloJsReactEnable { Line = line };
+
+        if (text.StartsWith("component ", StringComparison.OrdinalIgnoreCase))
+        {
+            var componentName = StripColon(text["component ".Length..].Trim());
+            if (string.IsNullOrWhiteSpace(componentName))
+                throw new SoloJsException($"line {line}: component needs a name");
+            return new SoloJsComponent { Name = componentName, Line = line };
+        }
+
+        if (text.StartsWith("state ", StringComparison.OrdinalIgnoreCase))
+        {
+            var rest = text[6..].Trim();
+            var eq = rest.IndexOf('=');
+            if (eq <= 0)
+                throw new SoloJsException($"line {line}: use `state count = 0`");
+            return new SoloJsState
+            {
+                Name = rest[..eq].Trim(),
+                Value = rest[(eq + 1)..].Trim(),
+                Line = line,
+            };
+        }
+
+        if (text is "render" or "render:" or "view" or "view:")
+            return new SoloJsRender { Line = line };
+
+        if (text.StartsWith("mount ", StringComparison.OrdinalIgnoreCase))
+            return ParseMount(text, line);
+
         if (text.StartsWith("fn ", StringComparison.OrdinalIgnoreCase))
             return ParseFn(text, line);
 
@@ -174,48 +223,163 @@ public sealed class SoloJsParser
         return new SoloJsExpr { Code = text.TrimEnd(';'), Line = line };
     }
 
-    private static SoloJsFetch ParseFetch(string text, int line)
+    private static SoloJsMount ParseMount(string text, int line)
     {
-        // fetch "url" into name
-        // fetch url into name
-        var rest = StripColon(text.Length > 5 ? text[5..].Trim() : "");
-        if (string.IsNullOrWhiteSpace(rest))
-            throw new SoloJsException($"line {line}: fetch needs a URL");
-
-        string url;
-        string? into = null;
+        // mount Counter into "#root"
+        // mount Counter into #root
+        // mount Counter "#root"
+        var rest = StripColon(text[6..].Trim());
         var intoIdx = rest.IndexOf(" into ", StringComparison.OrdinalIgnoreCase);
+        string component;
+        string selector;
         if (intoIdx >= 0)
         {
-            url = Unquote(rest[..intoIdx].Trim());
-            into = rest[(intoIdx + 6)..].Trim();
+            component = rest[..intoIdx].Trim();
+            selector = Unquote(rest[(intoIdx + 6)..].Trim());
         }
         else
         {
-            url = Unquote(rest);
+            var parts = SplitParts(rest);
+            if (parts.Length < 2)
+                throw new SoloJsException($"line {line}: use `mount Counter into \"#root\"`");
+            component = parts[0];
+            selector = Unquote(parts[1]);
         }
 
-        return new SoloJsFetch { Url = url, Into = into, Line = line };
+        if (string.IsNullOrWhiteSpace(component) || string.IsNullOrWhiteSpace(selector))
+            throw new SoloJsException($"line {line}: mount needs a component and selector");
+
+        // Optional props: mount Counter into "#root" name="Gem"
+        var mount = new SoloJsMount { Component = component.Split(' ')[0], Selector = selector, Line = line };
+        return mount;
     }
 
-    private static SoloJsAfter ParseAfter(string text, int line)
+    private static SoloJsElement ParseElement(string text, int line)
     {
-        // after 500  OR  after 500ms
-        var rest = StripColon(text[5..].Trim());
-        if (string.IsNullOrWhiteSpace(rest))
-            throw new SoloJsException($"line {line}: after needs a delay — try `after 500`");
-        rest = rest.TrimEnd('m', 's', 'M', 'S').Trim();
-        return new SoloJsAfter { DelayMs = rest, Line = line };
+        // Examples:
+        // div
+        // div.class "hi"
+        // button onClick=bump "+1"
+        // h1 {count}
+        // img src=logo.png
+        // Hello name="Gem"   (component reference — Capital tag)
+        var parts = SplitParts(text);
+        if (parts.Length == 0)
+            throw new SoloJsException($"line {line}: empty element");
+
+        var tagToken = parts[0];
+        var tag = tagToken;
+        var props = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        string? textLiteral = null;
+        string? textExpr = null;
+
+        // .class / #id on tag token: div.card#main
+        if (tag.Contains('.') || tag.Contains('#'))
+        {
+            var (clean, classNames, id) = SplitTagToken(tag);
+            tag = clean;
+            if (classNames.Count > 0)
+                props["className"] = string.Join(" ", classNames);
+            if (id is not null)
+                props["id"] = id;
+        }
+
+        for (var i = 1; i < parts.Length; i++)
+        {
+            var p = parts[i];
+            if (p.StartsWith('{') && p.EndsWith('}'))
+            {
+                textExpr = p[1..^1].Trim();
+                continue;
+            }
+
+            if ((p.StartsWith('"') && p.EndsWith('"')) || (p.StartsWith('\'') && p.EndsWith('\'')))
+            {
+                textLiteral = p[1..^1];
+                continue;
+            }
+
+            if (p.StartsWith('.'))
+            {
+                var cls = p[1..];
+                props["className"] = props.TryGetValue("className", out var existing)
+                    ? existing + " " + cls
+                    : cls;
+                continue;
+            }
+
+            if (p.StartsWith('#'))
+            {
+                props["id"] = p[1..];
+                continue;
+            }
+
+            var eq = p.IndexOf('=');
+            if (eq > 0)
+            {
+                var key = p[..eq];
+                var val = Unquote(p[(eq + 1)..]);
+                props[NormalizeProp(key)] = val;
+                continue;
+            }
+
+            // Remaining bare words are plain text (not boolean flags).
+            var textBits = parts.Skip(i).Where(x => !x.Contains('=') && !x.StartsWith('.') && !x.StartsWith('#') && !x.StartsWith('{'));
+            textLiteral = string.Join(" ", textBits.Select(Unquote));
+            break;
+        }
+
+        return new SoloJsElement
+        {
+            Tag = tag,
+            Text = textLiteral,
+            TextExpr = textExpr,
+            Line = line,
+            Props = props,
+        };
     }
 
-    private static SoloJsEvery ParseEvery(string text, int line)
+    private static (string Tag, List<string> Classes, string? Id) SplitTagToken(string token)
     {
-        var rest = StripColon(text[5..].Trim());
-        if (string.IsNullOrWhiteSpace(rest))
-            throw new SoloJsException($"line {line}: every needs an interval — try `every 1000`");
-        rest = rest.TrimEnd('m', 's', 'M', 'S').Trim();
-        return new SoloJsEvery { IntervalMs = rest, Line = line };
+        var classes = new List<string>();
+        string? id = null;
+        var tag = token;
+        var hash = token.IndexOf('#');
+        if (hash >= 0)
+        {
+            var after = token[(hash + 1)..];
+            var dot = after.IndexOf('.');
+            if (dot >= 0)
+            {
+                id = after[..dot];
+                after = after[dot..];
+            }
+            else
+            {
+                id = after;
+                after = "";
+            }
+            tag = token[..hash] + after;
+        }
+
+        var bits = tag.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        tag = bits[0];
+        for (var i = 1; i < bits.Length; i++)
+            classes.Add(bits[i]);
+        return (tag, classes, id);
     }
+
+    private static string NormalizeProp(string key) =>
+        key switch
+        {
+            "class" => "className",
+            "onclick" => "onClick",
+            "onchange" => "onChange",
+            "onsubmit" => "onSubmit",
+            "oninput" => "onInput",
+            "for" => "htmlFor",
+            _ => key,
+        };
 
     private static SoloJsFn ParseFn(string text, int line)
     {
@@ -270,6 +434,43 @@ public sealed class SoloJsParser
         }
 
         return new SoloJsForEach { Variable = variable, Iterable = iterable, Line = line };
+    }
+
+    private static SoloJsFetch ParseFetch(string text, int line)
+    {
+        var rest = StripColon(text.Length > 5 ? text[5..].Trim() : "");
+        if (string.IsNullOrWhiteSpace(rest))
+            throw new SoloJsException($"line {line}: fetch needs a URL");
+
+        string url;
+        string? into = null;
+        var intoIdx = rest.IndexOf(" into ", StringComparison.OrdinalIgnoreCase);
+        if (intoIdx >= 0)
+        {
+            url = Unquote(rest[..intoIdx].Trim());
+            into = rest[(intoIdx + 6)..].Trim();
+        }
+        else url = Unquote(rest);
+
+        return new SoloJsFetch { Url = url, Into = into, Line = line };
+    }
+
+    private static SoloJsAfter ParseAfter(string text, int line)
+    {
+        var rest = StripColon(text[5..].Trim());
+        if (string.IsNullOrWhiteSpace(rest))
+            throw new SoloJsException($"line {line}: after needs a delay — try `after 500`");
+        rest = rest.TrimEnd('m', 's', 'M', 'S').Trim();
+        return new SoloJsAfter { DelayMs = rest, Line = line };
+    }
+
+    private static SoloJsEvery ParseEvery(string text, int line)
+    {
+        var rest = StripColon(text[5..].Trim());
+        if (string.IsNullOrWhiteSpace(rest))
+            throw new SoloJsException($"line {line}: every needs an interval — try `every 1000`");
+        rest = rest.TrimEnd('m', 's', 'M', 'S').Trim();
+        return new SoloJsEvery { IntervalMs = rest, Line = line };
     }
 
     private static SoloJsOn ParseOn(string text, int line)
@@ -397,6 +598,7 @@ public sealed class SoloJsParser
         var parts = new List<string>();
         var cur = new System.Text.StringBuilder();
         var inQ = '\0';
+        var brace = 0;
         foreach (var ch in text)
         {
             if (inQ != '\0')
@@ -405,12 +607,18 @@ public sealed class SoloJsParser
                 if (ch == inQ) inQ = '\0';
                 continue;
             }
+
+            if (ch == '{') { brace++; cur.Append(ch); continue; }
+            if (ch == '}' && brace > 0) { brace--; cur.Append(ch); continue; }
+            if (brace > 0) { cur.Append(ch); continue; }
+
             if (ch is '"' or '\'')
             {
                 inQ = ch;
                 cur.Append(ch);
                 continue;
             }
+
             if (ch == ' ')
             {
                 if (cur.Length > 0)
@@ -420,8 +628,10 @@ public sealed class SoloJsParser
                 }
                 continue;
             }
+
             cur.Append(ch);
         }
+
         if (cur.Length > 0)
             parts.Add(cur.ToString());
         return parts.ToArray();

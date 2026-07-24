@@ -38,16 +38,18 @@ public static class SoloPageCompiler
         }
 
         string? js = null;
+        var usesReact = false;
         if (jsPath is not null)
         {
             var jsResult = SoloJsCompiler.Compile(File.ReadAllText(jsPath), Path.GetFileNameWithoutExtension(jsPath));
             if (!jsResult.Ok)
                 return SoloPageResult.Fail(jsResult.Errors.Select(e => $"SoloJS: {e}").ToArray());
             js = jsResult.JavaScript;
+            usesReact = jsResult.UsesReact;
         }
 
-        var bundled = Bundle(htmlResult.Html, css, js, options.InlineAssets);
-        return new SoloPageResult(true, bundled, Array.Empty<string>(), htmlPath, cssPath, jsPath);
+        var bundled = Bundle(htmlResult.Html, css, js, options.InlineAssets, usesReact || options.UseReact);
+        return new SoloPageResult(true, bundled, Array.Empty<string>(), htmlPath, cssPath, jsPath, usesReact || options.UseReact);
     }
 
     private static string? FindFirst(string dir, string? preferred, string glob)
@@ -64,12 +66,26 @@ public static class SoloPageCompiler
             .FirstOrDefault();
     }
 
-    private static string Bundle(string html, string? css, string? js, bool inline)
+    private static string Bundle(string html, string? css, string? js, bool inline, bool useReact)
     {
         if (!inline)
             return html;
 
         var result = html;
+
+        if (useReact)
+        {
+            var reactScripts =
+                """
+                <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+                <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+                """;
+            if (result.Contains("</head>", StringComparison.OrdinalIgnoreCase))
+                result = ReplaceOnce(result, "</head>", reactScripts + "\n</head>", StringComparison.OrdinalIgnoreCase);
+            else
+                result = reactScripts + "\n" + result;
+        }
+
         if (!string.IsNullOrWhiteSpace(css))
         {
             var styleBlock = "<style>\n" + css + "</style>";
@@ -107,6 +123,7 @@ public sealed class SoloPageOptions
     public string? CssName { get; set; } = "styles.solocss";
     public string? JsName { get; set; } = "app.solojs";
     public bool InlineAssets { get; set; } = true;
+    public bool UseReact { get; set; }
 }
 
 public sealed record SoloPageResult(
@@ -115,7 +132,8 @@ public sealed record SoloPageResult(
     IReadOnlyList<string> Errors,
     string? HtmlPath = null,
     string? CssPath = null,
-    string? JsPath = null)
+    string? JsPath = null,
+    bool UsesReact = false)
 {
     public static SoloPageResult Fail(IReadOnlyList<string> errors) =>
         new(false, string.Empty, errors);

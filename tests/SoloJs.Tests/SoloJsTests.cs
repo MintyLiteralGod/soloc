@@ -88,4 +88,36 @@ public class SoloJsTests
         Assert.Contains("solo.fetch(", result.JavaScript);
         Assert.Contains(".catch(", result.JavaScript);
     }
+
+    [Fact]
+    public void Compiles_react_component()
+    {
+        var result = SoloJsCompiler.Compile(
+            """
+            react
+
+            component Counter
+              state count = 0
+
+              fn bump()
+                count = count + 1
+
+              render
+                div.card
+                  h1 {count}
+                  p "Clicks so far"
+                  button onClick=bump "+1"
+
+            mount Counter into "#root"
+            """);
+
+        Assert.True(result.Ok, string.Join("; ", result.Errors));
+        Assert.True(result.UsesReact);
+        Assert.Contains("function Counter(props)", result.JavaScript);
+        Assert.Contains("React.useState(0)", result.JavaScript);
+        Assert.Contains("setCount(", result.JavaScript);
+        Assert.Contains("React.createElement", result.JavaScript);
+        Assert.Contains("solo.react.mount(Counter", result.JavaScript);
+        Assert.Contains("onClick: bump", result.JavaScript);
+    }
 }

@@ -1,0 +1,14 @@
+react
+
+component Counter
+  state count = 0
+
+  fn bump()
+    count = count + 1
+
+  render
+    div.card
+      h1 {count}
+      button onClick=bump "+1"
+
+mount Counter into "#root"

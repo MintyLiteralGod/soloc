@@ -1,0 +1,4 @@
+fn main()
+  let name = "SoloRUST"
+  println "Hello, {name}"
+  println "Welcome to Solo5"

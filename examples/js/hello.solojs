@@ -1,0 +1,9 @@
+print "Hello, SoloJS"
+
+fn add(a, b)
+  return a + b
+
+print add(2, 40)
+
+for i in 0..3
+  print i

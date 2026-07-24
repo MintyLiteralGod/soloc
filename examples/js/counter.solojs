@@ -1,0 +1,8 @@
+score = 0
+
+when ready
+  set "#out" text "Ready — click the button!"
+  on click "#btn"
+    score = score + 1
+    set "#score" text score
+    set "#out" text "Nice click!"

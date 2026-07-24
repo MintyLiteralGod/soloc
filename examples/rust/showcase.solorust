@@ -1,0 +1,16 @@
+fn add(a: i32, b: i32) -> i32
+  return a + b
+
+fn main()
+  let mut total = 0
+  for i in 1..6
+    total = total + i
+
+  let answer = add(2, 40)
+  println "sum = {total}"
+  println "2 + 40 = {answer}"
+
+  if answer == 42
+    println "Perfect"
+  else
+    println "Keep exploring"

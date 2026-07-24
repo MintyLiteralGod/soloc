@@ -9,7 +9,7 @@ component Counter
   render
     div.card
       h1 {count}
-      p Clicks so far
+      p "Clicks so far"
       button onClick=bump "+1"
 
 mount Counter into "#root"

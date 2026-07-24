@@ -165,8 +165,13 @@ static void PrintHelp()
           solopage version
 
         A SoloPage folder usually contains:
-          page.solohtml
-          styles.solocss
-          app.solojs
+  page.solohtml
+  styles.solocss
+  app.solojs
+
+React: if `app.solojs` uses `component` / `mount`, SoloPage
+injects React 18 UMD scripts automatically.
+
+See examples/page-react for a working SoloJS + React site.
         """);
 }

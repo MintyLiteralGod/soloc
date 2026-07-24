@@ -63,7 +63,8 @@ when ready
 | Set DOM | `set "#out" text "Hi"` |
 | Fetch | `fetch "url" into data` (+ optional `catch`) |
 | Timers | `after 500` / `every 1000` |
-| Runtime helpers | `solo.$`, `solo.on`, `solo.set`, `solo.fetch`, `solo.after`, `solo.every` |
+| **React** | `component` / `state` / `render` / `mount` → React 18 |
+| Runtime helpers | `solo.$`, `solo.on`, `solo.set`, `solo.fetch`, `solo.after`, `solo.every`, `solo.react.mount` |
 
 ## DOM helpers
 
@@ -92,6 +93,36 @@ when ready
   catch
     set "#out" text "offline"
 ```
+
+## React (components)
+
+SoloJS compiles to real React 18 (`createElement` + `useState` + `createRoot`).
+
+```solojs
+react
+
+component Counter
+  state count = 0
+
+  fn bump()
+    count = count + 1
+
+  render
+    div.card
+      h1 {count}
+      button onClick=bump "+1"
+
+mount Counter into "#root"
+```
+
+Load React UMD scripts (SoloPage does this automatically when it detects React):
+
+```html
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+```
+
+Try: `examples/js/react-counter.solojs` or `solopage build examples/page-react`
 
 ## Learn path
 

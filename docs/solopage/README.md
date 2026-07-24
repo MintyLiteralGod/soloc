@@ -50,6 +50,15 @@ Open **http://localhost:5080**
 2. Compile `styles.solocss`
 3. Compile `app.solojs`
 4. Inline CSS + JS into a single `index.html` (default)
+5. If SoloJS uses React (`component` / `mount`), inject React 18 UMD scripts
+
+## React example
+
+```bash
+dotnet run --project src/SoloPage.Cli -- build examples/page-react
+```
+
+Open `examples/page-react/index.html` in a browser.
 
 ## Related
 

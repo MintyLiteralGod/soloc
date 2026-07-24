@@ -20,6 +20,7 @@ Start here if you're new. Use the reference when you need a precise answer.
 
 ## Guides
 
+- [SoloC Studio](studio.md) — browser GUI app (editor + Arena)
 - [Philosophy](philosophy.md) — why SoloC is designed this way
 - [Cheat sheet](cheatsheet.md) — one page of common syntax
 - [Friendly errors](errors.md) — how to read `line:column` messages

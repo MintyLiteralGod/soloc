@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SoloC Studio — by SoloGem</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/studio.css" />
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <!-- LANDING -->
+  <section id="view-landing" class="view landing active">
+    <div class="landing-bg" aria-hidden="true"></div>
+    <header class="topbar">
+      <div class="brand-mark">SoloC</div>
+      <nav class="top-nav">
+        <button type="button" data-nav="studio">Studio</button>
+        <button type="button" data-nav="arena">Arena</button>
+      </nav>
+    </header>
+
+    <div class="landing-stage">
+      <p class="eyebrow">Made by SoloGem · open source</p>
+      <h1 class="hero-brand">SoloC</h1>
+      <p class="hero-line">The easiest language to learn — now with a real app.</p>
+      <div class="cta-row">
+        <button type="button" class="btn primary" data-nav="studio">Open Studio</button>
+        <button type="button" class="btn ghost" data-nav="arena">Play Arena</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STUDIO -->
+  <section id="view-studio" class="view studio">
+    <header class="appbar">
+      <button type="button" class="brand-link" data-nav="landing">SoloC</button>
+      <div class="appbar-title">Studio</div>
+      <nav class="top-nav">
+        <button type="button" class="active" data-nav="studio">Studio</button>
+        <button type="button" data-nav="arena">Arena</button>
+      </nav>
+    </header>
+
+    <div class="studio-layout">
+      <aside class="demo-rail">
+        <h2>Demos</h2>
+        <div id="demo-list" class="demo-list"></div>
+      </aside>
+
+      <main class="editor-pane">
+        <div class="pane-toolbar">
+          <span id="demo-title">Playground</span>
+          <div class="toolbar-actions">
+            <button type="button" id="btn-run" class="btn primary compact">Run</button>
+            <button type="button" id="btn-clear" class="btn ghost compact">Clear output</button>
+          </div>
+        </div>
+        <textarea id="source" spellcheck="false" aria-label="SoloC source editor"></textarea>
+      </main>
+
+      <aside class="output-pane">
+        <div class="pane-toolbar">
+          <span>Output</span>
+          <span id="run-meta" class="muted"></span>
+        </div>
+        <pre id="output" class="output"></pre>
+        <pre id="diagnostics" class="diagnostics"></pre>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ARENA -->
+  <section id="view-arena" class="view arena">
+    <header class="appbar">
+      <button type="button" class="brand-link" data-nav="landing">SoloC</button>
+      <div class="appbar-title">SoloGem Arena</div>
+      <nav class="top-nav">
+        <button type="button" data-nav="studio">Studio</button>
+        <button type="button" class="active" data-nav="arena">Arena</button>
+      </nav>
+    </header>
+
+    <div class="arena-layout">
+      <div class="arena-stage">
+        <div class="fighter-card hero-card">
+          <div class="fighter-name" id="hero-name">Kael</div>
+          <div class="hp-track"><div class="hp-fill" id="hero-hp"></div></div>
+          <div class="hp-label"><span id="hero-hp-text">100 / 100</span></div>
+          <div class="stat-grid">
+            <label>ATK <input id="hero-atk" type="range" min="6" max="20" value="14" /></label>
+            <label>DEF <input id="hero-def" type="range" min="2" max="14" value="6" /></label>
+            <label>LCK <input id="hero-lck" type="range" min="1" max="10" value="5" /></label>
+          </div>
+          <div class="stat-readout" id="hero-stats">ATK 14 · DEF 6 · LCK 5</div>
+        </div>
+
+        <div class="versus">
+          <div class="versus-orb">VS</div>
+          <button type="button" id="btn-fight" class="btn primary fight">Fight</button>
+          <p class="arena-hint">A visual SoloC-powered bout — tweak stats, then fight.</p>
+        </div>
+
+        <div class="fighter-card foe-card">
+          <div class="fighter-name" id="foe-name">Crystal Drake</div>
+          <div class="hp-track"><div class="hp-fill foe" id="foe-hp"></div></div>
+          <div class="hp-label"><span id="foe-hp-text">100 / 100</span></div>
+          <div class="stat-grid">
+            <label>ATK <input id="foe-atk" type="range" min="6" max="22" value="16" /></label>
+            <label>DEF <input id="foe-def" type="range" min="2" max="14" value="7" /></label>
+            <label>LCK <input id="foe-lck" type="range" min="1" max="10" value="4" /></label>
+          </div>
+          <div class="stat-readout" id="foe-stats">ATK 16 · DEF 7 · LCK 4</div>
+        </div>
+      </div>
+
+      <div class="arena-log-wrap">
+        <div class="pane-toolbar">
+          <span>Battle log</span>
+          <span id="arena-result" class="muted"></span>
+        </div>
+        <div id="arena-log" class="arena-log"></div>
+      </div>
+    </div>
+  </section>
+
+  <script src="/js/studio.js"></script>
+</body>
+</html>

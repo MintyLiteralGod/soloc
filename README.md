@@ -16,23 +16,19 @@ SoloC is an open-source, C#-inspired programming language designed for absolute 
 dotnet build SoloC.sln
 ```
 
-3. Run your first program:
+3. Open **SoloC Studio** (GUI app in your browser):
+
+```bash
+dotnet run --project src/SoloC.Playground
+```
+
+Then visit [http://localhost:5088](http://localhost:5088) — Studio editor + SoloGem Arena.
+
+Or run a script from the CLI:
 
 ```bash
 dotnet run --project src/SoloC.Cli -- run examples/hello.sc
 ```
-
-Or write `hello.sc`:
-
-```soloc
-print("Hello from SoloC!");
-```
-
-```bash
-dotnet run --project src/SoloC.Cli -- run hello.sc
-```
-
-You're coding. Welcome to SoloC.
 
 ## Learn SoloC
 
@@ -56,6 +52,7 @@ More: [Docs hub](docs/README.md) · [Cheat sheet](docs/cheatsheet.md) · [Langua
 
 ## Features
 
+- **SoloC Studio** — browser GUI app: code editor, demos, and SoloGem Arena
 - **Scripts** — top-level statements; no boilerplate required
 - **Functions** — short `fn` definitions
 - **Classes** — C#-style objects with `this` and `Main`

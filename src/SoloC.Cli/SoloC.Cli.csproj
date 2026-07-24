@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SoloC.Compiler\SoloC.Compiler.csproj" />
+    <ProjectReference Include="..\SoloHtml.Compiler\SoloHtml.Compiler.csproj" />
   </ItemGroup>
 
 </Project>

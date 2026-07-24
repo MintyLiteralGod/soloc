@@ -1,0 +1,7 @@
+page Hello
+  title Hello SoloHTML
+  hero
+    brand SoloGem
+    h1 Hello, SoloHTML
+    p The easiest way to make a web page.
+    button primary href=https://github.com/MintyLiteralGod/soloc Open GitHub

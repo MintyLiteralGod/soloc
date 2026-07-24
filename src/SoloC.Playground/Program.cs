@@ -1,6 +1,7 @@
 using SoloC.Compiler;
 using SoloC.Compiler.Diagnostics;
 using SoloC.Playground;
+using SoloHtml.Compiler;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls("http://0.0.0.0:5088");
@@ -10,6 +11,7 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 var demos = DemoCatalog.All;
+var htmlDemos = HtmlDemoCatalog.All;
 
 app.MapGet("/api/demos", () => demos.Select(d => new
 {
@@ -25,6 +27,19 @@ app.MapGet("/api/demos/{id}", (string id) =>
     return demo is null ? Results.NotFound() : Results.Ok(demo);
 });
 
+app.MapGet("/api/html/demos", () => htmlDemos.Select(d => new
+{
+    d.Id,
+    d.Title,
+    d.Blurb,
+}));
+
+app.MapGet("/api/html/demos/{id}", (string id) =>
+{
+    var demo = htmlDemos.FirstOrDefault(d => d.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+    return demo is null ? Results.NotFound() : Results.Ok(demo);
+});
+
 app.MapPost("/api/run", (RunRequest request) =>
 {
     var source = request.Source ?? string.Empty;
@@ -37,6 +52,12 @@ app.MapPost("/api/run", (RunRequest request) =>
         output.ToString(),
         result.Engine?.ToString(),
         result.Diagnostics.Select(d => FormatDiagnostic(d, compilation.SourceText.FileName)).ToArray()));
+});
+
+app.MapPost("/api/html/compile", (HtmlCompileRequest request) =>
+{
+    var result = SoloHtmlCompiler.Compile(request.Source ?? string.Empty, request.Title);
+    return Results.Ok(new HtmlCompileResponse(result.Ok, result.Html, result.Errors.ToArray()));
 });
 
 app.MapPost("/api/arena/battle", (ArenaBattleRequest request) =>
@@ -58,3 +79,5 @@ static string FormatDiagnostic(Diagnostic d, string file)
 
 internal sealed record RunRequest(string? Source, string? FileName);
 internal sealed record RunResponse(bool Ok, string Output, string? Engine, string[] Diagnostics);
+internal sealed record HtmlCompileRequest(string? Source, string? Title);
+internal sealed record HtmlCompileResponse(bool Ok, string Html, string[] Errors);

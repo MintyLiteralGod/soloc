@@ -1,6 +1,7 @@
 const views = {
   landing: document.getElementById("view-landing"),
   studio: document.getElementById("view-studio"),
+  html: document.getElementById("view-html"),
   arena: document.getElementById("view-arena"),
 };
 
@@ -13,8 +14,18 @@ const runMetaEl = document.getElementById("run-meta");
 const arenaLogEl = document.getElementById("arena-log");
 const arenaResultEl = document.getElementById("arena-result");
 
+const htmlSourceEl = document.getElementById("html-source");
+const htmlDemoListEl = document.getElementById("html-demo-list");
+const htmlDemoTitleEl = document.getElementById("html-demo-title");
+const htmlPreviewEl = document.getElementById("html-preview");
+const htmlDiagnosticsEl = document.getElementById("html-diagnostics");
+const htmlMetaEl = document.getElementById("html-meta");
+
 let demos = [];
+let htmlDemos = [];
 let activeDemoId = "hello";
+let activeHtmlDemoId = "showcase";
+let htmlPreviewTimer = null;
 
 function showView(name) {
   Object.entries(views).forEach(([key, el]) => {
@@ -26,6 +37,9 @@ function showView(name) {
   if (name === "arena") {
     syncStatReadouts();
     resetArenaBars();
+  }
+  if (name === "html") {
+    compileHtml();
   }
 }
 
@@ -49,9 +63,85 @@ async function loadDemos() {
   await selectDemo(activeDemoId);
 }
 
+async function loadHtmlDemos() {
+  const res = await fetch("/api/html/demos");
+  htmlDemos = await res.json();
+  htmlDemoListEl.innerHTML = "";
+  htmlDemos.forEach((demo) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "demo-item";
+    btn.dataset.id = demo.id;
+    btn.innerHTML = `<strong>${demo.title}</strong><span>${demo.blurb}</span>`;
+    btn.addEventListener("click", () => selectHtmlDemo(demo.id));
+    htmlDemoListEl.appendChild(btn);
+  });
+  await selectHtmlDemo(activeHtmlDemoId);
+}
+
+async function selectHtmlDemo(id) {
+  activeHtmlDemoId = id;
+  document.querySelectorAll("#html-demo-list .demo-item").forEach((el) => {
+    el.classList.toggle("active", el.dataset.id === id);
+  });
+  const res = await fetch(`/api/html/demos/${id}`);
+  if (!res.ok) return;
+  const demo = await res.json();
+  htmlDemoTitleEl.textContent = demo.title;
+  htmlSourceEl.value = demo.source;
+  await compileHtml();
+}
+
+async function compileHtml() {
+  htmlMetaEl.textContent = "compiling…";
+  const res = await fetch("/api/html/compile", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ source: htmlSourceEl.value }),
+  });
+  const data = await res.json();
+  if (!data.ok) {
+    htmlDiagnosticsEl.textContent = (data.errors || []).join("\n");
+    htmlMetaEl.textContent = "failed";
+    htmlPreviewEl.srcdoc = "<p style='font-family:sans-serif;padding:1rem;color:#b00020'>SoloHTML compile failed.</p>";
+    return;
+  }
+
+  htmlDiagnosticsEl.textContent = "";
+  htmlMetaEl.textContent = "live preview";
+  htmlPreviewEl.srcdoc = data.html;
+}
+
+document.getElementById("btn-html-compile").addEventListener("click", compileHtml);
+htmlSourceEl.addEventListener("input", () => {
+  clearTimeout(htmlPreviewTimer);
+  htmlPreviewTimer = setTimeout(compileHtml, 350);
+});
+htmlSourceEl.addEventListener("keydown", (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+    e.preventDefault();
+    compileHtml();
+  }
+  if (e.key === "Tab") {
+    e.preventDefault();
+    const start = htmlSourceEl.selectionStart;
+    const end = htmlSourceEl.selectionEnd;
+    htmlSourceEl.value = `${htmlSourceEl.value.substring(0, start)}  ${htmlSourceEl.value.substring(end)}`;
+    htmlSourceEl.selectionStart = htmlSourceEl.selectionEnd = start + 2;
+  }
+});
+
+loadDemos().catch((err) => {
+  diagnosticsEl.textContent = String(err);
+});
+loadHtmlDemos().catch((err) => {
+  htmlDiagnosticsEl.textContent = String(err);
+});
+
+
 async function selectDemo(id) {
   activeDemoId = id;
-  document.querySelectorAll(".demo-item").forEach((el) => {
+  document.querySelectorAll("#demo-list .demo-item").forEach((el) => {
     el.classList.toggle("active", el.dataset.id === id);
   });
   const res = await fetch(`/api/demos/${id}`);
@@ -182,7 +272,3 @@ async function fight() {
 }
 
 document.getElementById("btn-fight").addEventListener("click", fight);
-
-loadDemos().catch((err) => {
-  diagnosticsEl.textContent = String(err);
-});

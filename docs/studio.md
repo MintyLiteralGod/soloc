@@ -1,6 +1,6 @@
 # SoloC Studio
 
-Browser GUI for SoloC — made by SoloGem.
+Browser GUI for SoloC + SoloHTML — made by SoloGem.
 
 ## Run
 
@@ -14,6 +14,7 @@ Open **http://localhost:5088**
 
 - **Landing** — brand-first SoloC intro
 - **Studio** — write/run SoloC with demo gallery
+- **SoloHTML** — live markup editor → HTML preview
 - **Arena** — visual fight UI with live HP bars and battle log
 
 No terminal coding required once the app is open.

@@ -22,12 +22,18 @@ dotnet build SoloC.sln
 dotnet run --project src/SoloC.Playground
 ```
 
-Then visit [http://localhost:5088](http://localhost:5088) — Studio editor + SoloGem Arena.
+Then visit [http://localhost:5088](http://localhost:5088) — SoloC Studio, **SoloHTML** live preview, and SoloGem Arena.
 
 Or run a script from the CLI:
 
 ```bash
 dotnet run --project src/SoloC.Cli -- run examples/hello.sc
+```
+
+Compile a SoloHTML page:
+
+```bash
+dotnet run --project src/SoloC.Cli -- html examples/html/showcase.solohtml
 ```
 
 ## Learn SoloC
@@ -52,7 +58,8 @@ More: [Docs hub](docs/README.md) · [Cheat sheet](docs/cheatsheet.md) · [Langua
 
 ## Features
 
-- **SoloC Studio** — browser GUI app: code editor, demos, and SoloGem Arena
+- **SoloC Studio** — browser GUI: SoloC editor, SoloHTML preview, SoloGem Arena
+- **SoloHTML** — indentation markup that compiles to HTML5 ([docs](docs/solohtml/README.md))
 - **Scripts** — top-level statements; no boilerplate required
 - **Functions** — short `fn` definitions
 - **Classes** — C#-style objects with `this` and `Main`

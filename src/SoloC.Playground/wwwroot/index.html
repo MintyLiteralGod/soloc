@@ -19,6 +19,7 @@
       <div class="brand-mark">SoloC</div>
       <nav class="top-nav">
         <button type="button" data-nav="studio">Studio</button>
+        <button type="button" data-nav="html">SoloHTML</button>
         <button type="button" data-nav="arena">Arena</button>
       </nav>
     </header>
@@ -26,9 +27,10 @@
     <div class="landing-stage">
       <p class="eyebrow">Made by SoloGem · open source</p>
       <h1 class="hero-brand">SoloC</h1>
-      <p class="hero-line">The easiest language to learn — now with a real app.</p>
+      <p class="hero-line">The easiest language to learn — now with SoloHTML pages too.</p>
       <div class="cta-row">
         <button type="button" class="btn primary" data-nav="studio">Open Studio</button>
+        <button type="button" class="btn ghost" data-nav="html">Try SoloHTML</button>
         <button type="button" class="btn ghost" data-nav="arena">Play Arena</button>
       </div>
     </div>
@@ -41,13 +43,14 @@
       <div class="appbar-title">Studio</div>
       <nav class="top-nav">
         <button type="button" class="active" data-nav="studio">Studio</button>
+        <button type="button" data-nav="html">SoloHTML</button>
         <button type="button" data-nav="arena">Arena</button>
       </nav>
     </header>
 
     <div class="studio-layout">
       <aside class="demo-rail">
-        <h2>Demos</h2>
+        <h2>SoloC demos</h2>
         <div id="demo-list" class="demo-list"></div>
       </aside>
 
@@ -73,6 +76,45 @@
     </div>
   </section>
 
+  <!-- SOLOHTML -->
+  <section id="view-html" class="view html-studio">
+    <header class="appbar">
+      <button type="button" class="brand-link" data-nav="landing">SoloC</button>
+      <div class="appbar-title">SoloHTML</div>
+      <nav class="top-nav">
+        <button type="button" data-nav="studio">Studio</button>
+        <button type="button" class="active" data-nav="html">SoloHTML</button>
+        <button type="button" data-nav="arena">Arena</button>
+      </nav>
+    </header>
+
+    <div class="studio-layout html-layout">
+      <aside class="demo-rail">
+        <h2>SoloHTML demos</h2>
+        <div id="html-demo-list" class="demo-list"></div>
+      </aside>
+
+      <main class="editor-pane">
+        <div class="pane-toolbar">
+          <span id="html-demo-title">SoloHTML</span>
+          <div class="toolbar-actions">
+            <button type="button" id="btn-html-compile" class="btn primary compact">Preview</button>
+          </div>
+        </div>
+        <textarea id="html-source" spellcheck="false" aria-label="SoloHTML source editor"></textarea>
+      </main>
+
+      <aside class="output-pane preview-pane">
+        <div class="pane-toolbar">
+          <span>Live preview</span>
+          <span id="html-meta" class="muted"></span>
+        </div>
+        <iframe id="html-preview" title="SoloHTML preview" class="html-preview"></iframe>
+        <pre id="html-diagnostics" class="diagnostics"></pre>
+      </aside>
+    </div>
+  </section>
+
   <!-- ARENA -->
   <section id="view-arena" class="view arena">
     <header class="appbar">
@@ -80,6 +122,7 @@
       <div class="appbar-title">SoloGem Arena</div>
       <nav class="top-nav">
         <button type="button" data-nav="studio">Studio</button>
+        <button type="button" data-nav="html">SoloHTML</button>
         <button type="button" class="active" data-nav="arena">Arena</button>
       </nav>
     </header>

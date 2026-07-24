@@ -27,7 +27,9 @@ public sealed class SoloEnvironment
         if (Enclosing is not null)
             return Enclosing.Get(name);
 
-        throw new RuntimeException($"Undefined variable '{name}'.");
+        throw new RuntimeException(
+            $"I can't find a variable named '{name}'.",
+            tip: "Did you forget to declare it with var, let, or a type like int?");
     }
 
     public void Assign(string name, SoloValue value)
@@ -35,7 +37,9 @@ public sealed class SoloEnvironment
         if (_values.TryGetValue(name, out var variable))
         {
             if (variable.IsImmutable)
-                throw new RuntimeException($"Cannot assign to immutable variable '{name}'.");
+                throw new RuntimeException(
+                    $"'{name}' was declared with let, so it can't change.",
+                    tip: "Use var if you need to update the value later.");
 
             _values[name] = variable with { Value = value };
             return;
@@ -47,7 +51,9 @@ public sealed class SoloEnvironment
             return;
         }
 
-        throw new RuntimeException($"Undefined variable '{name}'.");
+        throw new RuntimeException(
+            $"I can't find a variable named '{name}'.",
+            tip: "Declare it before assigning, e.g. var x = 0;");
     }
 
     public bool TryGet(string name, out SoloValue value)
@@ -70,9 +76,15 @@ public sealed class SoloEnvironment
 
 public sealed class RuntimeException : Exception
 {
-    public RuntimeException(string message) : base(message)
+    public RuntimeException(string message, Diagnostics.TextSpan? span = null, string? tip = null)
+        : base(message)
     {
+        Span = span;
+        Tip = tip;
     }
+
+    public Diagnostics.TextSpan? Span { get; }
+    public string? Tip { get; }
 }
 
 public sealed class ReturnException : Exception

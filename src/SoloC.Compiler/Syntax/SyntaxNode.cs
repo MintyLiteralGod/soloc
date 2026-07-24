@@ -190,14 +190,50 @@ public sealed class ParameterSyntax : SyntaxNode
 
 public sealed class TypeClauseSyntax : SyntaxNode
 {
-    public TypeClauseSyntax(SyntaxToken typeToken)
+    public TypeClauseSyntax(SyntaxToken typeToken, bool isArray = false, SyntaxToken? openBracket = null, SyntaxToken? closeBracket = null)
     {
         TypeToken = typeToken;
+        IsArray = isArray;
+        OpenBracketToken = openBracket;
+        CloseBracketToken = closeBracket;
     }
 
     public override SyntaxKind Kind => SyntaxKind.TypeClause;
     public SyntaxToken TypeToken { get; }
-    public override TextSpan Span => TypeToken.Span;
+    public bool IsArray { get; }
+    public SyntaxToken? OpenBracketToken { get; }
+    public SyntaxToken? CloseBracketToken { get; }
+
+    public string TypeName => IsArray ? $"{TypeToken.Text}[]" : TypeToken.Text;
+
+    public override TextSpan Span
+    {
+        get
+        {
+            if (!IsArray || CloseBracketToken is null)
+                return TypeToken.Span;
+
+            return new TextSpan(TypeToken.Span.Start, CloseBracketToken.Span.End - TypeToken.Span.Start);
+        }
+    }
+}
+
+public sealed class UsingDirectiveSyntax : MemberSyntax
+{
+    public UsingDirectiveSyntax(SyntaxToken usingKeyword, SyntaxToken name, SyntaxToken semicolon)
+    {
+        UsingKeyword = usingKeyword;
+        Name = name;
+        SemicolonToken = semicolon;
+    }
+
+    public override SyntaxKind Kind => SyntaxKind.UsingDirective;
+    public SyntaxToken UsingKeyword { get; }
+    public SyntaxToken Name { get; }
+    public SyntaxToken SemicolonToken { get; }
+
+    public override TextSpan Span =>
+        new(UsingKeyword.Span.Start, SemicolonToken.Span.End - UsingKeyword.Span.Start);
 }
 
 public sealed class ArgumentListSyntax : SyntaxNode

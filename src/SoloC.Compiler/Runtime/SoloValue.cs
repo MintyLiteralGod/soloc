@@ -21,6 +21,7 @@ public readonly struct SoloValue : IEquatable<SoloValue>
     public static SoloValue FromBool(bool value) => new(SoloValueKind.Bool, value);
     public static SoloValue FromString(string value) => new(SoloValueKind.String, value);
     public static SoloValue FromObject(SoloObject value) => new(SoloValueKind.Object, value);
+    public static SoloValue FromArray(SoloArray value) => new(SoloValueKind.Array, value);
     public static SoloValue FromFunction(SoloFunction value) => new(SoloValueKind.Function, value);
     public static SoloValue FromNative(NativeFunction value) => new(SoloValueKind.NativeFunction, value);
 
@@ -33,6 +34,7 @@ public readonly struct SoloValue : IEquatable<SoloValue>
         bool b => FromBool(b),
         string s => FromString(s),
         SoloObject o => FromObject(o),
+        SoloArray a => FromArray(a),
         SoloFunction fn => FromFunction(fn),
         NativeFunction n => FromNative(n),
         SoloValue v => v,
@@ -62,6 +64,10 @@ public readonly struct SoloValue : IEquatable<SoloValue>
         ? (SoloObject)Raw!
         : throw new InvalidOperationException($"Expected object but got {Kind}.");
 
+    public SoloArray AsArray() => Kind == SoloValueKind.Array
+        ? (SoloArray)Raw!
+        : throw new InvalidOperationException($"Expected array but got {Kind}.");
+
     public bool IsTruthy() => Kind switch
     {
         SoloValueKind.Null or SoloValueKind.Void => false,
@@ -69,6 +75,7 @@ public readonly struct SoloValue : IEquatable<SoloValue>
         SoloValueKind.Int => (int)Raw! != 0,
         SoloValueKind.Double => (double)Raw! != 0,
         SoloValueKind.String => !string.IsNullOrEmpty((string)Raw!),
+        SoloValueKind.Array => ((SoloArray)Raw!).Length > 0,
         _ => true,
     };
 
@@ -81,6 +88,7 @@ public readonly struct SoloValue : IEquatable<SoloValue>
         SoloValueKind.Bool => (bool)Raw! ? "true" : "false",
         SoloValueKind.String => (string)Raw!,
         SoloValueKind.Object => ((SoloObject)Raw!).ToString(),
+        SoloValueKind.Array => ((SoloArray)Raw!).ToString(),
         SoloValueKind.Function => $"<fn {((SoloFunction)Raw!).Name}>",
         SoloValueKind.NativeFunction => $"<native {((NativeFunction)Raw!).Name}>",
         _ => Raw?.ToString() ?? "null",
@@ -100,8 +108,37 @@ public enum SoloValueKind
     Bool,
     String,
     Object,
+    Array,
     Function,
     NativeFunction,
+}
+
+public sealed class SoloArray
+{
+    public SoloArray(IEnumerable<SoloValue> elements)
+    {
+        Elements = elements.ToList();
+    }
+
+    public List<SoloValue> Elements { get; }
+    public int Length => Elements.Count;
+
+    public SoloValue Get(int index)
+    {
+        if (index < 0 || index >= Elements.Count)
+            throw new RuntimeException($"Array index {index} is out of range (length {Elements.Count}).");
+        return Elements[index];
+    }
+
+    public void Set(int index, SoloValue value)
+    {
+        if (index < 0 || index >= Elements.Count)
+            throw new RuntimeException($"Array index {index} is out of range (length {Elements.Count}).");
+        Elements[index] = value;
+    }
+
+    public override string ToString() =>
+        "[" + string.Join(", ", Elements.Select(e => e.ToString())) + "]";
 }
 
 public sealed class SoloObject

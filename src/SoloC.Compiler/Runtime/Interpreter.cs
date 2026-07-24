@@ -42,7 +42,13 @@ public sealed class Interpreter
     {
         try
         {
-            // First pass: register classes and functions
+            // First pass: modules, then classes and functions
+            foreach (var member in unit.Members)
+            {
+                if (member is UsingDirectiveSyntax usingDirective)
+                    ImportModule(usingDirective);
+            }
+
             foreach (var member in unit.Members)
             {
                 switch (member)
@@ -84,12 +90,26 @@ public sealed class Interpreter
         }
         catch (RuntimeException ex)
         {
-            _diagnostics.Error(ex.Message, new TextSpan(0, 0));
+            _diagnostics.Error(
+                ex.Message,
+                ex.Span ?? new TextSpan(0, 0),
+                tip: ex.Tip ?? "Re-read the line slowly — SoloC errors are meant to guide you.");
             return SoloValue.Null;
         }
         catch (ReturnException ex)
         {
             return ex.Value;
+        }
+    }
+
+    private void ImportModule(UsingDirectiveSyntax usingDirective)
+    {
+        if (!StdModules.TryImport(usingDirective.Name.Text, _globals, out var error))
+        {
+            throw new RuntimeException(
+                error ?? $"Unknown module '{usingDirective.Name.Text}'.",
+                usingDirective.Name.Span,
+                tip: $"Available modules: {string.Join(", ", StdModules.Names)}.");
         }
     }
 
@@ -291,11 +311,26 @@ public sealed class Interpreter
                 var ctor = _environment.Get(typeName);
                 var args = creation.ArgumentList.Arguments.Select(Evaluate).ToArray();
                 if (ctor.Kind != SoloValueKind.NativeFunction)
-                    throw new RuntimeException($"'{typeName}' is not a constructible type.");
+                    throw new RuntimeException($"'{typeName}' is not a constructible type.", creation.Span);
                 return ((NativeFunction)ctor.Raw!).Implementation(args);
             }
+            case ArrayLiteralExpressionSyntax arrayLiteral:
+            {
+                var elements = arrayLiteral.Elements.Select(Evaluate).ToArray();
+                return SoloValue.FromArray(new SoloArray(elements));
+            }
+            case ElementAccessExpressionSyntax elementAccess:
+            {
+                var target = Evaluate(elementAccess.Expression);
+                var indexValue = Evaluate(elementAccess.Index);
+                if (target.Kind != SoloValueKind.Array)
+                    throw new RuntimeException("Only arrays can be indexed with [ ].", elementAccess.Span, "Create an array like var nums = [1, 2, 3];");
+                if (indexValue.Kind != SoloValueKind.Int)
+                    throw new RuntimeException("Array indexes must be int values.", elementAccess.Index.Span);
+                return target.AsArray().Get(indexValue.AsInt());
+            }
             default:
-                throw new RuntimeException($"Unsupported expression '{expression.Kind}'.");
+                throw new RuntimeException($"Unsupported expression '{expression.Kind}'.", expression.Span);
         }
     }
 
@@ -439,8 +474,23 @@ public sealed class Interpreter
     private SoloValue EvaluateMemberAccess(MemberAccessExpressionSyntax member)
     {
         var target = Evaluate(member.Expression);
+
+        if (target.Kind == SoloValueKind.Array)
+        {
+            if (member.MemberName.Text == "Length")
+                return SoloValue.FromInt(target.AsArray().Length);
+
+            throw new RuntimeException(
+                $"Arrays only have .Length (not .{member.MemberName.Text}).",
+                member.MemberName.Span,
+                tip: "Try nums.Length to get how many items are in the array.");
+        }
+
+        if (target.Kind == SoloValueKind.String && member.MemberName.Text == "Length")
+            return SoloValue.FromInt(target.AsString().Length);
+
         if (target.Kind != SoloValueKind.Object)
-            throw new RuntimeException("Only objects have fields.");
+            throw new RuntimeException("Only objects have fields.", member.Span);
 
         var instance = target.AsObject();
         if (instance.Fields.TryGetValue(member.MemberName.Text, out var field))
@@ -449,7 +499,7 @@ public sealed class Interpreter
         if (instance.Definition.Methods.TryGetValue(member.MemberName.Text, out var method))
             return SoloValue.FromFunction(method);
 
-        throw new RuntimeException($"Undefined member '{member.MemberName.Text}'.");
+        throw new RuntimeException($"Undefined member '{member.MemberName.Text}'.", member.MemberName.Span);
     }
 
     private void Assign(ExpressionSyntax target, SoloValue value)
@@ -463,17 +513,28 @@ public sealed class Interpreter
             {
                 var instanceValue = Evaluate(member.Expression);
                 if (instanceValue.Kind != SoloValueKind.Object)
-                    throw new RuntimeException("Only objects have fields.");
+                    throw new RuntimeException("Only objects have fields.", member.Span);
 
                 var instance = instanceValue.AsObject();
                 if (!instance.Fields.ContainsKey(member.MemberName.Text))
-                    throw new RuntimeException($"Undefined field '{member.MemberName.Text}'.");
+                    throw new RuntimeException($"Undefined field '{member.MemberName.Text}'.", member.MemberName.Span);
 
                 instance.Fields[member.MemberName.Text] = value;
                 break;
             }
+            case ElementAccessExpressionSyntax elementAccess:
+            {
+                var arrayValue = Evaluate(elementAccess.Expression);
+                var indexValue = Evaluate(elementAccess.Index);
+                if (arrayValue.Kind != SoloValueKind.Array)
+                    throw new RuntimeException("Only arrays can be indexed with [ ].", elementAccess.Span);
+                if (indexValue.Kind != SoloValueKind.Int)
+                    throw new RuntimeException("Array indexes must be int values.", elementAccess.Index.Span);
+                arrayValue.AsArray().Set(indexValue.AsInt(), value);
+                break;
+            }
             default:
-                throw new RuntimeException("Invalid assignment target.");
+                throw new RuntimeException("Invalid assignment target.", target.Span);
         }
     }
 

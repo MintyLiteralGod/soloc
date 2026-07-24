@@ -64,6 +64,7 @@ public enum SyntaxKind
     FnKeyword,
     LetKeyword,
     PrintKeyword,
+    UsingKeyword,
 
     // Nodes
     CompilationUnit,
@@ -71,6 +72,7 @@ public enum SyntaxKind
     ParameterList,
     ArgumentList,
     TypeClause,
+    UsingDirective,
 
     // Expressions
     LiteralExpression,
@@ -82,6 +84,8 @@ public enum SyntaxKind
     CallExpression,
     MemberAccessExpression,
     ObjectCreationExpression,
+    ArrayLiteralExpression,
+    ElementAccessExpression,
 
     // Statements
     BlockStatement,

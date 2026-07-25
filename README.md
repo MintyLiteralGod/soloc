@@ -16,7 +16,7 @@ SoloC started as an open-source, C#-inspired language for absolute beginners. It
 | **SoloHTML** | `.solohtml` | HTML5 | [localhost:5089](http://localhost:5089) |
 | **SoloCSS** | `.solocss` | CSS | [localhost:5090](http://localhost:5090) |
 | **SoloJS** | `.solojs` | JavaScript | [localhost:5091](http://localhost:5091) |
-| **SoloRUST** *(experimental)* | `.solorust` | Rust source | [localhost:5092](http://localhost:5092) |
+| **SoloLua** | `.sololua` | Lua 5.4 source | [localhost:5092](http://localhost:5092) |
 | **SoloPage** | folder | bundled HTML site | CLI + Hub |
 | **Solo5 Hub** | — | Studio directory | [localhost:5080](http://localhost:5080) |
 
@@ -39,7 +39,7 @@ dotnet run --project src/SoloC.Playground     # SoloC     :5088
 dotnet run --project src/SoloHtml.Studio       # SoloHTML  :5089
 dotnet run --project src/SoloCss.Studio        # SoloCSS   :5090
 dotnet run --project src/SoloJs.Studio         # SoloJS    :5091
-dotnet run --project src/SoloRust.Studio       # SoloRUST  :5092
+dotnet run --project src/SoloLua.Studio        # SoloLua   :5092
 ```
 
 ### Compilers (CLI)
@@ -49,7 +49,7 @@ dotnet run --project src/SoloC.Cli -- run examples/hello.sc
 dotnet run --project src/SoloHtml.Cli -- compile examples/html/showcase.solohtml
 dotnet run --project src/SoloCss.Cli -- compile examples/css/hello.solocss
 dotnet run --project src/SoloJs.Cli -- compile examples/js/hello.solojs
-dotnet run --project src/SoloRust.Cli -- new hello_crate
+dotnet run --project src/SoloLua.Cli -- compile examples/lua/showcase.sololua
 dotnet run --project src/SoloPage.Cli -- build examples/page
 ```
 
@@ -75,15 +75,16 @@ More: [Docs hub](docs/README.md) · [Cheat sheet](docs/cheatsheet.md) · [Philos
 
 ## Features
 
-- **Solo5 suite** — SoloC + SoloHTML + SoloCSS + SoloJS + SoloRUST
+- **Solo5 suite** — SoloC + SoloHTML + SoloCSS + SoloJS + SoloLua
 - **Solo5 Hub** — one landing page for every Studio (`:5080`)
 - **SoloPage** — bundle HTML+CSS+JS from one folder
 - **Studios for every language** — browser GUIs with demos and download
-- **Dedicated compilers** — `soloc`, `solohtml`, `solocss`, `solojs`, `solorust`, `solopage`
+- **Dedicated compilers** — `soloc`, `solohtml`, `solocss`, `solojs`, `sololua`, `solopage`
 - **SoloC** — multi-file `using "file.sc"`, `input()`, friendly errors, bytecode VM
 - **SoloHTML** — `include` components, `css` / `js` links
-- **SoloJS** — `fetch`, `after`, `every`, DOM helpers
-- **SoloRUST** — Cargo `new` scaffold + borrow coach comments
+- **SoloJS** — `fetch`, `after`, `every`, DOM helpers, React
+- **SoloLua** — locals-by-default, dense `list`, `class`, `continue`, `!=`/`&&`/`||` → real Lua
+- **Archived:** SoloRUST lives under [`archive/solorust/`](archive/solorust/README.md)
 
 ## Examples
 
@@ -124,9 +125,10 @@ src/SoloC.*             SoloC language, CLI, Studio (:5088)
 src/SoloHtml.*          SoloHTML compiler, CLI, Studio (:5089)
 src/SoloCss.*           SoloCSS compiler, CLI, Studio (:5090)
 src/SoloJs.*            SoloJS compiler, CLI, Studio (:5091)
-src/SoloRust.*          SoloRUST experimental compiler, CLI, Studio (:5092)
+src/SoloLua.*           SoloLua compiler, CLI, Studio (:5092)
 src/SoloPage.*          SoloPage bundler + CLI
 src/Solo5.Hub/          Solo5 Hub (:5080)
+archive/solorust/       Archived SoloRUST (experimental)
 tests/                  Unit tests per language
 examples/               Samples for every language + SoloPage
 docs/                   Learn path, Solo5 hub, per-language guides

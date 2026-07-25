@@ -1,5 +1,5 @@
-using SoloRust.Compiler;
-using SoloRust.Studio;
+using SoloLua.Compiler;
+using SoloLua.Studio;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls("http://0.0.0.0:5092");
@@ -8,7 +8,7 @@ var app = builder.Build();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-var demos = SoloRustDemoCatalog.All;
+var demos = SoloLuaDemoCatalog.All;
 
 app.MapGet("/api/demos", () => demos.Select(d => new { d.Id, d.Title, d.Blurb }));
 app.MapGet("/api/demos/{id}", (string id) =>
@@ -19,12 +19,12 @@ app.MapGet("/api/demos/{id}", (string id) =>
 
 app.MapPost("/api/compile", (CompileRequest request) =>
 {
-    var result = SoloRustCompiler.Compile(request.Source ?? string.Empty, request.Title);
-    return Results.Ok(new CompileResponse(result.Ok, result.Rust, result.Errors.ToArray(), result.Notes.ToArray()));
+    var result = SoloLuaCompiler.Compile(request.Source ?? string.Empty, request.Title);
+    return Results.Ok(new CompileResponse(result.Ok, result.Lua, result.Errors.ToArray(), result.Notes.ToArray()));
 });
 
 app.MapFallbackToFile("index.html");
 app.Run();
 
 internal sealed record CompileRequest(string? Source, string? Title);
-internal sealed record CompileResponse(bool Ok, string Rust, string[] Errors, string[] Notes);
+internal sealed record CompileResponse(bool Ok, string Lua, string[] Errors, string[] Notes);

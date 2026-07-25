@@ -1,0 +1,35 @@
+// SoloLua showcase — Lua without the usual footguns
+
+nums = list 1, 2, 3
+nums.push(4)
+
+for i in 1..6
+  if i % 2 == 0
+    continue
+  print "odd {i}"
+
+person = map
+  name: "Ada"
+  year: 1815
+
+for k, v in person
+  print "{k} = {v}"
+
+class Counter
+  fn new(start)
+    self.n = start ?? 0
+    return self
+
+  fn inc()
+    self.n += 1
+    return self.n
+
+c = Counter.new(10)
+print "count {c.inc()}"
+print "count {c.inc()}"
+
+try
+  if nums.len() < 100
+    error("demo catch")
+catch err
+  print "caught: {err}"

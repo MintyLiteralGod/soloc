@@ -30,7 +30,7 @@ print(sqrt(25));
 | [Reference](../reference/README.md) | Precise syntax & stdlib |
 | [Bytecode VM](../vm.md) | Optional deep dive |
 | [examples/](../../examples/) | Working `.sc` programs |
-| [Solo5](../solo5/README.md) | SoloHTML · SoloCSS · SoloJS · SoloRUST |
+| [Solo5](../solo5/README.md) | SoloHTML · SoloCSS · SoloJS · SoloLua |
 
 ## Explore the rest of Solo5
 
@@ -38,7 +38,7 @@ print(sqrt(25));
 dotnet run --project src/SoloHtml.Studio   # pages     :5089
 dotnet run --project src/SoloCss.Studio    # styles    :5090
 dotnet run --project src/SoloJs.Studio     # scripts   :5091
-dotnet run --project src/SoloRust.Studio   # systems   :5092 (experimental)
+dotnet run --project src/SoloLua.Studio    # Lua       :5092
 ```
 
 ## Run the samples

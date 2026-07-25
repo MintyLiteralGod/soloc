@@ -1,3 +1,5 @@
+> **Archived.** SoloRUST is no longer an active Solo5 language. See [archive/solorust/README.md](../../archive/solorust/README.md) and **SoloLua**.
+
 # SoloRUST
 
 **Experimental systems on-ramp by SoloGem** — indent-friendly SoloRUST compiles to readable **Rust source**.

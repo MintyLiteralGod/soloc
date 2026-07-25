@@ -75,6 +75,33 @@ public sealed class SoloJsSet : SoloJsNode
     public required string Value { get; init; }
 }
 
+public sealed class SoloJsClassOp : SoloJsNode
+{
+    public required string Op { get; init; } // add|remove|toggle
+    public required string Selector { get; init; }
+    public required string ClassName { get; init; }
+}
+
+public sealed class SoloJsFocus : SoloJsNode
+{
+    public required string Selector { get; init; }
+}
+
+public sealed class SoloJsPreventDefault : SoloJsNode;
+
+public sealed class SoloJsStopPropagation : SoloJsNode;
+
+public sealed class SoloJsFrame : SoloJsNode
+{
+    public List<SoloJsNode> Body { get; } = [];
+}
+
+public sealed class SoloJsCanvas : SoloJsNode
+{
+    public required string Selector { get; init; }
+    public string? Into { get; init; }
+}
+
 public sealed class SoloJsFetch : SoloJsNode
 {
     public required string Url { get; init; }

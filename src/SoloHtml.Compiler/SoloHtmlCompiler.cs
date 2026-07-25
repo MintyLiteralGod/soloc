@@ -12,6 +12,7 @@ public static class SoloHtmlCompiler
         {
             var document = new SoloHtmlParser().Parse(source);
             document = SoloHtmlIncludeExpander.Expand(document, basePath);
+            document = SoloHtmlLayoutExpander.Expand(document, basePath);
             var emitter = new HtmlEmitter(
                 includeDefaultTheme: emitOptions?.IncludeDefaultTheme,
                 forceDefaultTheme: emitOptions?.ForceDefaultTheme ?? false);

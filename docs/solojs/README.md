@@ -60,22 +60,31 @@ when ready
 | If / elif / else | indent blocks |
 | DOM ready | `when ready` |
 | Events | `on click "#btn"` |
-| Set DOM | `set "#out" text "Hi"` |
+| Set DOM | `set "#out" text "Hi"` / `style.*` / `dataset.*` / `attr …` |
+| ClassList | `addClass` / `removeClass` / `toggleClass` |
+| Events | `on click "#btn"` handler gets `e`; `preventDefault` / `stopPropagation` |
+| Focus | `focus "#field"` |
+| Frame / canvas | `frame` → rAF; `canvas "#c" into gfx` |
+| Routing helpers | `solo.route.go` / `markActive` (hash or History) |
 | Fetch | `fetch "url" into data` (+ optional `catch`) |
 | Timers | `after 500` / `every 1000` |
 | **React** | `component` / `state` / `render` / `mount` → React 18 |
-| Runtime helpers | `solo.$`, `solo.on`, `solo.set`, `solo.fetch`, `solo.after`, `solo.every`, `solo.react.mount` |
 
 ## DOM helpers
 
 ```solojs
 when ready
   set "#title" text "Solo5"
-  set "#box" html "<strong>Hi</strong>"
-  set "#field" value "typed"
-  set "#pane" class "open"
-  on click "#save"
-    print "saved"
+  set "#nav" style.display flex
+  set "#btn" attr aria-expanded true
+  toggleClass "#nav" open
+  canvas "#c" into gfx
+  on click "#menu"
+    preventDefault
+    toggleClass "#nav" open
+  frame
+    gfx.clear()
+  solo.route.markActive("nav a")
 ```
 
 ## Fetch + timers

@@ -26,18 +26,19 @@ static int Build(string[] args, bool watch)
 {
     string? dir = null;
     string? outPath = null;
+    var forceInline = false;
     for (var i = 1; i < args.Length; i++)
     {
         if (args[i] is "--out" or "-o" && i + 1 < args.Length) outPath = args[++i];
+        else if (args[i] is "--inline") forceInline = true;
         else if (!args[i].StartsWith('-')) dir = args[i];
     }
 
     dir ??= ".";
     var projectDir = Path.GetFullPath(dir);
-    outPath ??= Path.Combine(projectDir, "index.html");
 
     if (!watch)
-        return BuildOnce(projectDir, outPath);
+        return BuildOnce(projectDir, outPath, forceInline);
 
     Console.WriteLine($"Watching {projectDir} — rebuild on .solohtml / .solocss / .solojs save");
     Console.WriteLine("Press Ctrl+C to stop.");
@@ -49,7 +50,7 @@ static int Build(string[] args, bool watch)
         cts.Cancel();
     };
 
-    BuildOnce(projectDir, outPath);
+    BuildOnce(projectDir, outPath, forceInline);
 
     using var watcher = new FileSystemWatcher(projectDir)
     {
@@ -61,7 +62,7 @@ static int Build(string[] args, bool watch)
     var pending = false;
     void OnChange(object _, FileSystemEventArgs e)
     {
-        if (!IsSoloSource(e.FullPath) || Path.GetFullPath(e.FullPath) == Path.GetFullPath(outPath))
+        if (!IsSoloSource(e.FullPath))
             return;
         pending = true;
     }
@@ -78,10 +79,10 @@ static int Build(string[] args, bool watch)
             if (pending)
             {
                 pending = false;
-                Thread.Sleep(80); // coalesce save bursts
+                Thread.Sleep(80);
                 if (pending)
                     continue;
-                BuildOnce(projectDir, outPath);
+                BuildOnce(projectDir, outPath, forceInline);
             }
 
             Thread.Sleep(100);
@@ -95,9 +96,9 @@ static int Build(string[] args, bool watch)
     return 0;
 }
 
-static int BuildOnce(string projectDir, string outPath)
+static int BuildOnce(string projectDir, string? outPath, bool forceInline)
 {
-    var result = SoloPageCompiler.Build(projectDir);
+    var result = SoloPageCompiler.Build(projectDir, new SoloPageOptions { ForceInline = forceInline });
     if (!result.Ok)
     {
         foreach (var e in result.Errors)
@@ -105,12 +106,38 @@ static int BuildOnce(string projectDir, string outPath)
         return 1;
     }
 
-    File.WriteAllText(outPath, result.Html);
-    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Wrote {outPath}");
+    var files = result.Files ?? [new SoloPageArtifact("index.html", result.Html)];
+    var outDir = ResolveOutDir(projectDir, outPath, result.IsSite || files.Count > 1);
+
+    foreach (var file in files)
+    {
+        var dest = Path.Combine(outDir, file.RelativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+        File.WriteAllText(dest, file.Content);
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Wrote {dest}");
+    }
+
     if (result.HtmlPath is not null) Console.WriteLine($"  html: {result.HtmlPath}");
     if (result.CssPath is not null) Console.WriteLine($"  css:  {result.CssPath}");
     if (result.JsPath is not null) Console.WriteLine($"  js:   {result.JsPath}");
+    if (result.IsSite) Console.WriteLine($"  site: {files.Count(f => f.RelativePath.EndsWith(".html"))} routes");
     return 0;
+}
+
+static string ResolveOutDir(string projectDir, string? outPath, bool multi)
+{
+    if (string.IsNullOrWhiteSpace(outPath))
+        return multi ? Path.Combine(projectDir, "dist") : projectDir;
+
+    var full = Path.GetFullPath(outPath);
+    if (multi || Directory.Exists(full) || !full.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
+    {
+        Directory.CreateDirectory(full);
+        return full;
+    }
+
+    // Single-file --out index.html → write into that file's directory as index.html only
+    return Path.GetDirectoryName(full) ?? projectDir;
 }
 
 static bool IsSoloSource(string path)
@@ -124,8 +151,126 @@ static bool IsSoloSource(string path)
 static int NewProject(string[] args)
 {
     var name = args.ElementAtOrDefault(1) ?? "mysite";
+    var site = args.Any(a => a is "--site" or "--multi");
     var dir = Path.GetFullPath(name);
     Directory.CreateDirectory(dir);
+
+    if (site)
+    {
+        Directory.CreateDirectory(Path.Combine(dir, "pages"));
+        Directory.CreateDirectory(Path.Combine(dir, "layouts"));
+        Directory.CreateDirectory(Path.Combine(dir, "components"));
+        Directory.CreateDirectory(Path.Combine(dir, "tokens"));
+
+        File.WriteAllText(Path.Combine(dir, "layouts", "shell.solohtml"),
+            """
+            page theme=none
+              head
+                favicon href=/favicon.svg
+                meta name=description content=SoloPage site
+                og title=SoloPage
+                og description=Multi-page Solo5 site
+              include ../components/nav.solohtml
+              main
+                slot
+              include ../components/footer.solohtml
+            """);
+
+        File.WriteAllText(Path.Combine(dir, "components", "nav.solohtml"),
+            """
+            nav #site-nav
+              a href=/ Home
+              a href=/deskcore DeskCore
+              button #menu-btn type=button Menu
+            """);
+
+        File.WriteAllText(Path.Combine(dir, "components", "footer.solohtml"),
+            """
+            footer
+              p Made with Solo5 · SoloPage
+            """);
+
+        File.WriteAllText(Path.Combine(dir, "pages", "index.solohtml"),
+            """
+            layout ../layouts/shell.solohtml
+              title Home
+              hero
+                brand SoloGem
+                h1 Multi-page SoloPage
+                p Shared layout, real head tags, SoloCSS tokens.
+                a.btn.primary href=/deskcore Open DeskCore
+            """);
+
+        File.WriteAllText(Path.Combine(dir, "pages", "deskcore.solohtml"),
+            """
+            layout ../layouts/shell.solohtml
+              title DeskCore
+              section
+                h1 DeskCore
+                p Second route — same shell, different body.
+                form action=mailto:hello@example.com method=post
+                  label Email
+                  input type=email name=email required=true
+                  button.btn.primary type=submit Send
+            """);
+
+        File.WriteAllText(Path.Combine(dir, "tokens", "brand.solocss"),
+            """
+            vars
+              brand #0f2a22
+              accent #d8ff3e
+              paper #f4fff8
+            """);
+
+        File.WriteAllText(Path.Combine(dir, "styles.solocss"),
+            """
+            include tokens/brand.solocss
+
+            body
+              margin 0
+              font "Segoe UI", system-ui, sans-serif
+              background $paper
+              color $brand
+
+            nav
+              display flex
+              gap 1rem
+              pad 1rem 1.5rem
+
+            nav a.active
+              bold
+
+            .hero
+              padding 4rem
+              background linear-gradient(145deg, $brand, $accent)
+              color $paper
+
+            .btn
+              display inline-block
+              pad 0.75rem 1.2rem
+              background $accent
+              color $brand
+              radius 0.55rem
+              no-underline
+              bold
+            """);
+
+        File.WriteAllText(Path.Combine(dir, "app.solojs"),
+            """
+            when ready
+              solo.route.markActive("nav a")
+              on click "#menu-btn"
+                toggleClass "#site-nav" open
+                set "#menu-btn" attr aria-expanded true
+            """);
+
+        Console.WriteLine($"Created SoloPage site: {dir}");
+        Console.WriteLine("Next:");
+        Console.WriteLine($"  solopage build {name}");
+        Console.WriteLine($"  # → {name}/dist/index.html + dist/deskcore/index.html + assets/");
+        return 0;
+    }
+
     Directory.CreateDirectory(Path.Combine(dir, "components"));
 
     File.WriteAllText(Path.Combine(dir, "page.solohtml"),
@@ -136,7 +281,7 @@ static int NewProject(string[] args)
             brand SoloGem
             h1 Hello, SoloPage
             p SoloHTML + SoloCSS + SoloJS in one folder.
-            button primary href=#go Get started
+            a.btn.primary href=#go Get started
           include components/footer.solohtml
         """);
 
@@ -164,10 +309,7 @@ static int NewProject(string[] args)
           background linear-gradient(145deg, $brand, $accent)
           color $paper
 
-          h1
-            size clamp(2.2rem, 6vw, 3.8rem)
-
-        .button
+        .btn
           display inline-block
           pad 0.75rem 1.2rem
           background $accent
@@ -193,13 +335,13 @@ static int NewProject(string[] args)
     Console.WriteLine($"Created SoloPage project: {dir}");
     Console.WriteLine("Next:");
     Console.WriteLine($"  solopage build {name}");
-    Console.WriteLine($"  solopage watch {name}");
+    Console.WriteLine($"  solopage new {name}-site --site   # multi-page");
     return 0;
 }
 
 static int PrintVersion()
 {
-    Console.WriteLine("SoloPage 0.1.0 — SoloGem Solo5 (MIT)");
+    Console.WriteLine("SoloPage 0.2.0 — SoloGem Solo5 (MIT)");
     return 0;
 }
 
@@ -208,9 +350,9 @@ static int PrintHubHint()
     Console.WriteLine(
         """
         Solo5 Hub (all languages):
-        
+
           dotnet run --project src/Solo5.Hub
-        
+
         Then open http://localhost:5080
         """);
     return 0;
@@ -229,26 +371,22 @@ static void PrintHelp()
         """
         SoloPage — assemble SoloHTML + SoloCSS + SoloJS (Solo5)
 
-        A folder is the unit. Not a framework — one compile into index.html.
-
         Usage:
-          solopage new <name>
-          solopage build [folder] [--out index.html]
-          solopage watch [folder] [--out index.html]
+          solopage new <name> [--site]
+          solopage build [folder] [--out dist|index.html] [--inline]
+          solopage watch [folder]
           solopage hub
           solopage version
 
-        A SoloPage folder usually contains:
-          page.solohtml
-          styles.solocss
-          app.solojs
+        Single page:
+          page.solohtml + styles.solocss + app.solojs → index.html
 
-        When styles.solocss is present, SoloHTML's default theme is skipped
-        so your SoloCSS owns the look.
+        Site mode (pages/ folder):
+          pages/index.solohtml     → dist/index.html        (/)
+          pages/deskcore.solohtml  → dist/deskcore/index.html (/deskcore/)
+          + shared assets/site.css + assets/site.js
 
-        React: if app.solojs uses component / mount, SoloPage
-        injects React 18 UMD scripts automatically.
-
-        See examples/page-react for a working SoloJS + React site.
+        Layouts: `layout layouts/shell.solohtml` with a `slot` in the shell.
+        Head: favicon, og, canonical, link, meta — `link` is HTML <link>, use `a` for anchors.
         """);
 }

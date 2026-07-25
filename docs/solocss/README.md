@@ -68,6 +68,7 @@ media max-width 640px
 - **Media queries** — `media max-width 640px` or `@media (max-width: 640px)`
 - **Shortcuts** — see cheat sheet below
 - **Comments** — `//` only (`#` is for colors and id selectors)
+- **Partials** — `include tokens/brand.solocss` (or `import`) splices shared tokens across pages
 
 ## Property cheat sheet
 

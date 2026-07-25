@@ -26,6 +26,33 @@ public class SoloJsTests
     }
 
     [Fact]
+    public void Compiles_classlist_canvas_and_events()
+    {
+        var result = SoloJsCompiler.Compile(
+            """
+            when ready
+              canvas "#c" into gfx
+              on click "#btn"
+                preventDefault
+                toggleClass "#nav" open
+                set "#btn" attr aria-expanded true
+                set "#nav" style.display flex
+              frame
+                print gfx.width
+            """);
+
+        Assert.True(result.Ok, string.Join("; ", result.Errors));
+        Assert.Contains("solo.canvas(\"#c\")", result.JavaScript);
+        Assert.Contains("(e) =>", result.JavaScript);
+        Assert.Contains("e.preventDefault()", result.JavaScript);
+        Assert.Contains("solo.toggleClass(\"#nav\", \"open\")", result.JavaScript);
+        Assert.Contains("attr.aria-expanded", result.JavaScript);
+        Assert.Contains("style.display", result.JavaScript);
+        Assert.Contains("solo.frame(() =>", result.JavaScript);
+        Assert.Contains("markActive", result.JavaScript);
+    }
+
+    [Fact]
     public void Compiles_dom_helpers_and_reassign()
     {
         var result = SoloJsCompiler.Compile(

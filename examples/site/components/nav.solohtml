@@ -1,0 +1,4 @@
+nav #site-nav
+  a href=/ Home
+  a href=/deskcore DeskCore
+  button #menu-btn type=button Menu

@@ -84,6 +84,7 @@ public sealed class SoloJsParser
                 case SoloJsFetch fetch: stack.Push((indent, fetch.ThenBody, false)); break;
                 case SoloJsAfter after: stack.Push((indent, after.Body, false)); break;
                 case SoloJsEvery every: stack.Push((indent, every.Body, false)); break;
+                case SoloJsFrame frame: stack.Push((indent, frame.Body, false)); break;
                 case SoloJsComponent comp:
                     program.UsesReact = true;
                     stack.Push((indent, comp.Body, false));
@@ -200,6 +201,28 @@ public sealed class SoloJsParser
 
         if (text.StartsWith("set ", StringComparison.OrdinalIgnoreCase))
             return ParseSet(text, line);
+
+        if (text.StartsWith("addClass ", StringComparison.OrdinalIgnoreCase) ||
+            text.StartsWith("removeClass ", StringComparison.OrdinalIgnoreCase) ||
+            text.StartsWith("toggleClass ", StringComparison.OrdinalIgnoreCase))
+            return ParseClassOp(text, line);
+
+        if (text.StartsWith("focus ", StringComparison.OrdinalIgnoreCase))
+            return ParseFocus(text, line);
+
+        if (text is "preventDefault" or "preventDefault:" or "prevent default")
+            return new SoloJsPreventDefault { Line = line };
+
+        if (text is "stopPropagation" or "stopPropagation:" or "stop propagation")
+            return new SoloJsStopPropagation { Line = line };
+
+        if (text is "frame" or "frame:" or "raf" or "raf:" ||
+            text.Equals("requestAnimationFrame", StringComparison.OrdinalIgnoreCase) ||
+            text.Equals("requestAnimationFrame:", StringComparison.OrdinalIgnoreCase))
+            return new SoloJsFrame { Line = line };
+
+        if (text.StartsWith("canvas ", StringComparison.OrdinalIgnoreCase))
+            return ParseCanvas(text, line);
 
         if (text.StartsWith("print", StringComparison.OrdinalIgnoreCase))
         {
@@ -528,18 +551,116 @@ public sealed class SoloJsParser
             after = rest[(sp + 1)..].Trim();
         }
 
-        foreach (var prop in new[] { "text", "html", "value", "class" })
+        // dataset.foo / style.color / aria-expanded
+        foreach (var prop in new[]
+                 {
+                     "text", "html", "value", "class", "style", "focus",
+                     "dataset", "href", "src", "disabled", "checked", "hidden",
+                 })
         {
             if (after.StartsWith(prop, StringComparison.OrdinalIgnoreCase))
             {
                 var value = after[prop.Length..].Trim().TrimStart('=').Trim();
-                if (string.IsNullOrWhiteSpace(value))
+                // style.color red  OR  dataset.open true
+                if ((prop is "style" or "dataset") && value.Length > 0 && !value.StartsWith('{'))
+                {
+                    var sp = value.IndexOf(' ');
+                    if (sp > 0)
+                    {
+                        var sub = value[..sp].Trim().TrimStart('.');
+                        var restVal = value[(sp + 1)..].Trim().TrimStart('=').Trim();
+                        return new SoloJsSet
+                        {
+                            Selector = selector,
+                            Property = prop + "." + sub,
+                            Value = restVal,
+                            Line = line,
+                        };
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(value) && prop is not "focus")
                     throw new SoloJsException($"line {line}: set needs a value");
-                return new SoloJsSet { Selector = selector, Property = prop, Value = value, Line = line };
+                return new SoloJsSet
+                {
+                    Selector = selector,
+                    Property = prop,
+                    Value = string.IsNullOrWhiteSpace(value) ? "true" : value,
+                    Line = line,
+                };
             }
         }
 
-        throw new SoloJsException($"line {line}: set property must be text, html, value, or class");
+        // generic attr: set "#x" attr aria-expanded true
+        if (after.StartsWith("attr ", StringComparison.OrdinalIgnoreCase))
+        {
+            var restAttr = after[5..].Trim();
+            var sp = restAttr.IndexOf(' ');
+            if (sp < 0)
+                throw new SoloJsException($"line {line}: use `set \"#x\" attr name value`");
+            var name = restAttr[..sp].Trim();
+            var value = restAttr[(sp + 1)..].Trim();
+            return new SoloJsSet { Selector = selector, Property = "attr." + name, Value = value, Line = line };
+        }
+
+        throw new SoloJsException($"line {line}: set property must be text, html, value, class, style, dataset, attr, …");
+    }
+
+    private static SoloJsClassOp ParseClassOp(string text, int line)
+    {
+        var op = text.StartsWith("addClass", StringComparison.OrdinalIgnoreCase) ? "add"
+            : text.StartsWith("removeClass", StringComparison.OrdinalIgnoreCase) ? "remove"
+            : "toggle";
+        var rest = text[(text.IndexOf(' ') + 1)..].Trim();
+        string selector;
+        string className;
+        if (rest.StartsWith('"') || rest.StartsWith('\''))
+        {
+            (selector, var after) = ReadQuoted(rest, line);
+            className = Unquote(after.Trim());
+        }
+        else
+        {
+            var parts = SplitParts(rest);
+            if (parts.Length < 2)
+                throw new SoloJsException($"line {line}: use `toggleClass \"#nav\" open`");
+            selector = Unquote(parts[0]);
+            className = Unquote(parts[1]);
+        }
+        return new SoloJsClassOp { Op = op, Selector = selector, ClassName = className, Line = line };
+    }
+
+    private static SoloJsFocus ParseFocus(string text, int line)
+    {
+        var rest = Unquote(text[5..].Trim());
+        if (string.IsNullOrWhiteSpace(rest))
+            throw new SoloJsException($"line {line}: focus needs a selector");
+        return new SoloJsFocus { Selector = rest, Line = line };
+    }
+
+    private static SoloJsCanvas ParseCanvas(string text, int line)
+    {
+        // canvas "#c" into ctx
+        // canvas "#c"
+        var rest = StripColon(text[6..].Trim());
+        string selector;
+        string? into = null;
+        var intoIdx = rest.IndexOf(" into ", StringComparison.OrdinalIgnoreCase);
+        if (intoIdx >= 0)
+        {
+            selector = Unquote(rest[..intoIdx].Trim());
+            into = rest[(intoIdx + 6)..].Trim();
+        }
+        else
+        {
+            var parts = SplitParts(rest);
+            selector = Unquote(parts[0]);
+            if (parts.Length >= 3 && parts[1].Equals("into", StringComparison.OrdinalIgnoreCase))
+                into = parts[2];
+        }
+        if (string.IsNullOrWhiteSpace(selector))
+            throw new SoloJsException($"line {line}: canvas needs a selector");
+        return new SoloJsCanvas { Selector = selector, Into = into, Line = line };
     }
 
     private static bool TryParseAssign(string text, out string? keyword, out string name, out string value)

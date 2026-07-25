@@ -67,6 +67,34 @@ public class SoloCssTests
     }
 
     [Fact]
+    public void Include_partials()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "solocss-inc-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "tokens.solocss"), """
+                vars
+                  brand #0f2a22
+                """);
+            File.WriteAllText(Path.Combine(root, "main.solocss"), """
+                include tokens.solocss
+                body
+                  color $brand
+                """);
+
+            var result = SoloCssCompiler.CompileFile(Path.Combine(root, "main.solocss"));
+            Assert.True(result.Ok, string.Join("; ", result.Errors));
+            Assert.Contains("--brand:", result.Css);
+            Assert.Contains("var(--brand)", result.Css);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Hash_is_not_a_comment_slash_slash_is()
     {
         var result = SoloCssCompiler.Compile(

@@ -1,0 +1,10 @@
+page theme=none
+  head
+    favicon href=/favicon.svg
+    meta name=description content=SoloPage site
+    og title=SoloPage
+    og description=Multi-page Solo5 site
+  include ../components/nav.solohtml
+  main
+    slot
+  include ../components/footer.solohtml

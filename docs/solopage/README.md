@@ -1,70 +1,109 @@
 # SoloPage
 
-**Assemble SoloHTML + SoloCSS + SoloJS into one `index.html`** — SoloGem Solo5.
+**Assemble SoloHTML + SoloCSS + SoloJS into a site** — SoloGem Solo5.
 
-Not a full web framework. A SoloPage project is just a folder; one compile stitches the three languages.
+Not a full web framework. A folder is the unit: one page, or many routes with a shared shell.
+
+## Single page
 
 ```text
 mysite/
   page.solohtml
   styles.solocss
   app.solojs
-  components/     (optional includes)
+  components/
 ```
-
-## Tools
-
-| Tool | What |
-|------|------|
-| CLI | `src/SoloPage.Cli` → `solopage` |
-| Library | `src/SoloPage.Compiler` |
-| Hub | `src/Solo5.Hub` → **http://localhost:5080** |
-
-## Quick start
 
 ```bash
 dotnet run --project src/SoloPage.Cli -- new mysite
 dotnet run --project src/SoloPage.Cli -- build mysite
-# → mysite/index.html
-
-dotnet run --project src/SoloPage.Cli -- watch mysite
+# → mysite/index.html (CSS/JS inlined)
 ```
 
-Or build the repo sample:
+## Site mode (multi-page)
+
+```text
+mysite/
+  pages/
+    index.solohtml       → dist/index.html           (/)
+    deskcore.solohtml    → dist/deskcore/index.html  (/deskcore/)
+  layouts/shell.solohtml
+  components/
+  tokens/brand.solocss
+  styles.solocss
+  app.solojs
+```
 
 ```bash
-dotnet run --project src/SoloPage.Cli -- build examples/page
+dotnet run --project src/SoloPage.Cli -- new mysite --site
+dotnet run --project src/SoloPage.Cli -- build mysite
+# → dist/ + assets/site.css + assets/site.js (shared, cacheable)
 ```
 
-## Solo5 Hub
+Sample: `examples/site`
 
-One landing page for every Studio:
+## Layouts + includes
 
-```bash
-dotnet run --project src/Solo5.Hub
+```solohtml
+layout layouts/shell.solohtml
+  title Home
+  hero
+    h1 Hello
 ```
 
-Open **http://localhost:5080**
+Shell owns nav/footer/head once; pages fill `slot`:
 
-## How assembling works
-
-1. Compile `page.solohtml` (supports `include`, `css`, `js`)
-2. Compile `styles.solocss` — when present, SoloHTML’s default theme is skipped
-3. Compile `app.solojs`
-4. Inline CSS + JS into a single `index.html` (default)
-5. If SoloJS uses React (`component` / `mount`), inject React 18 UMD scripts
-
-## React example
-
-```bash
-dotnet run --project src/SoloPage.Cli -- build examples/page-react
+```solohtml
+page theme=none
+  head
+    favicon href=/favicon.svg
+    og title=My Site
+  include components/nav.solohtml
+  main
+    slot
+  include components/footer.solohtml
 ```
 
-Open `examples/page-react/index.html` in a browser.
+## Head control
+
+| Tag | Emits |
+|-----|--------|
+| `favicon href=…` | `<link rel="icon">` |
+| `apple-touch-icon` | apple touch icon |
+| `canonical href=…` | canonical link |
+| `og title=…` | `<meta property="og:title">` |
+| `link rel=… href=…` | real HTML `<link>` (not an anchor) |
+| `meta name=… content=…` | meta |
+| `a href=…` | anchors |
+
+## Theme
+
+When a `.solocss` file is present, SoloHTML’s default theme stays **off**.  
+`.button` theme class is **opt-in** (`primary` / `secondary` / `ghost` / `btn` / `styled`).
+
+## SoloJS site helpers
+
+- `toggleClass` / `addClass` / `removeClass`
+- `set "#x" style.display flex`, `attr aria-expanded true`, `dataset…`
+- `preventDefault` / `stopPropagation` inside `on`
+- `frame` → `requestAnimationFrame`
+- `canvas "#c" into gfx`
+- `solo.route.markActive("nav a")` / `solo.route.go("/path")`
+
+## Forms & external flows
+
+Use real form tags; wire checkout/mailto outside SoloPage:
+
+```solohtml
+form action=mailto:hello@example.com method=post
+  label Email
+  input type=email name=email required=true
+  button.btn.primary type=submit Send
+```
+
+Polar/Stripe/etc.: point `action` or a SoloJS `on click` at your checkout URL — SoloPage does not own payments.
 
 ## Related
 
 - [Solo5 overview](../solo5/README.md)
-- [SoloHTML includes](../solohtml/README.md)
-- [SoloCSS](../solocss/README.md)
-- [SoloJS](../solojs/README.md)
+- [SoloHTML](../solohtml/README.md) · [SoloCSS](../solocss/README.md) · [SoloJS](../solojs/README.md)

@@ -1,0 +1,29 @@
+include tokens/brand.solocss
+
+body
+  margin 0
+  font "Segoe UI", system-ui, sans-serif
+  background $paper
+  color $brand
+
+nav
+  display flex
+  gap 1rem
+  pad 1rem 1.5rem
+
+nav a.active
+  bold
+
+.hero
+  padding 4rem
+  background linear-gradient(145deg, $brand, $accent)
+  color $paper
+
+.btn
+  display inline-block
+  pad 0.75rem 1.2rem
+  background $accent
+  color $brand
+  radius 0.55rem
+  no-underline
+  bold

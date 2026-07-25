@@ -133,7 +133,7 @@ public sealed class JsEmitter
 
             case SoloJsOn on:
                 sb.Append(pad).Append("solo.on(").Append(JsString(on.Selector)).Append(", ")
-                    .Append(JsString(on.EventName)).AppendLine(", () => {");
+                    .Append(JsString(on.EventName)).AppendLine(", (e) => {");
                 EmitBlock(sb, on.Body, depth + 1, declared, stateVars);
                 sb.Append(pad).AppendLine("});");
                 break;
@@ -178,7 +178,49 @@ public sealed class JsEmitter
 
             case SoloJsSet set:
                 sb.Append(pad).Append("solo.set(").Append(JsString(set.Selector)).Append(", ")
-                    .Append(JsString(set.Property)).Append(", ").Append(set.Value).AppendLine(");");
+                    .Append(JsString(set.Property)).Append(", ")
+                    .Append(RewriteStateExpr(set.Value, stateVars)).AppendLine(");");
+                break;
+
+            case SoloJsClassOp cls:
+                sb.Append(pad).Append("solo.").Append(cls.Op).Append("Class(")
+                    .Append(JsString(cls.Selector)).Append(", ")
+                    .Append(JsString(cls.ClassName)).AppendLine(");");
+                break;
+
+            case SoloJsFocus focus:
+                sb.Append(pad).Append("solo.focus(").Append(JsString(focus.Selector)).AppendLine(");");
+                break;
+
+            case SoloJsPreventDefault:
+                sb.Append(pad).AppendLine("e.preventDefault();");
+                break;
+
+            case SoloJsStopPropagation:
+                sb.Append(pad).AppendLine("e.stopPropagation();");
+                break;
+
+            case SoloJsFrame frame:
+                sb.Append(pad).AppendLine("solo.frame(() => {");
+                EmitBlock(sb, frame.Body, depth + 1, declared, stateVars);
+                sb.Append(pad).AppendLine("});");
+                break;
+
+            case SoloJsCanvas canvas:
+                if (!string.IsNullOrWhiteSpace(canvas.Into) && declared.Add(canvas.Into!))
+                {
+                    sb.Append(pad).Append("const ").Append(canvas.Into).Append(" = solo.canvas(")
+                        .Append(JsString(canvas.Selector)).AppendLine(");");
+                }
+                else if (!string.IsNullOrWhiteSpace(canvas.Into))
+                {
+                    sb.Append(pad).Append(canvas.Into).Append(" = solo.canvas(")
+                        .Append(JsString(canvas.Selector)).AppendLine(");");
+                }
+                else
+                {
+                    sb.Append(pad).Append("solo.canvas(").Append(JsString(canvas.Selector)).AppendLine(");");
+                }
                 break;
 
             case SoloJsPrint p:
@@ -387,10 +429,13 @@ const solo = {
   $(sel) {
     return document.querySelector(sel);
   },
+  $$(sel) {
+    return Array.from(document.querySelectorAll(sel));
+  },
   on(sel, eventName, handler) {
-    const el = this.$(sel);
-    if (!el) { console.warn("SoloJS: no element for", sel); return; }
-    el.addEventListener(eventName, handler);
+    const nodes = this.$$(sel);
+    if (!nodes.length) { console.warn("SoloJS: no element for", sel); return; }
+    nodes.forEach((el) => el.addEventListener(eventName, handler));
   },
   set(sel, prop, value) {
     const el = this.$(sel);
@@ -399,7 +444,72 @@ const solo = {
     else if (prop === "html") el.innerHTML = value;
     else if (prop === "value") el.value = value;
     else if (prop === "class") el.className = value;
+    else if (prop === "focus") { el.focus(); }
+    else if (prop === "hidden") el.hidden = !!value && value !== "false";
+    else if (prop === "disabled") el.disabled = !!value && value !== "false";
+    else if (prop === "checked") el.checked = !!value && value !== "false";
+    else if (prop === "style" && value && typeof value === "object") Object.assign(el.style, value);
+    else if (prop.startsWith("style.")) el.style[prop.slice(6)] = value;
+    else if (prop.startsWith("dataset.")) el.dataset[prop.slice(8)] = value;
+    else if (prop.startsWith("attr.")) el.setAttribute(prop.slice(5), value);
     else el.setAttribute(prop, value);
+  },
+  addClass(sel, name) {
+    const el = this.$(sel);
+    if (el) el.classList.add(name);
+  },
+  removeClass(sel, name) {
+    const el = this.$(sel);
+    if (el) el.classList.remove(name);
+  },
+  toggleClass(sel, name) {
+    const el = this.$(sel);
+    if (el) el.classList.toggle(name);
+  },
+  focus(sel) {
+    const el = this.$(sel);
+    if (el) el.focus();
+  },
+  frame(handler) {
+    return requestAnimationFrame(handler);
+  },
+  canvas(sel) {
+    const el = this.$(sel);
+    if (!el) { console.warn("SoloJS: no canvas for", sel); return null; }
+    const ctx = el.getContext("2d");
+    return {
+      el,
+      ctx,
+      width: el.width,
+      height: el.height,
+      clear() { ctx.clearRect(0, 0, el.width, el.height); },
+      resize(w, h) { el.width = w; el.height = h; this.width = w; this.height = h; },
+      fill(color) { ctx.fillStyle = color; ctx.fillRect(0, 0, el.width, el.height); },
+    };
+  },
+  route: {
+    path() {
+      return location.hash ? location.hash.replace(/^#/, "") || "/" : location.pathname;
+    },
+    go(path, { hash = true } = {}) {
+      if (hash) location.hash = path.startsWith("#") ? path : "#" + path;
+      else history.pushState({}, "", path);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    },
+    onChange(handler) {
+      window.addEventListener("hashchange", handler);
+      window.addEventListener("popstate", handler);
+    },
+    markActive(sel, attr = "href") {
+      const here = this.path();
+      document.querySelectorAll(sel).forEach((a) => {
+        const href = a.getAttribute(attr) || "";
+        const path = href.replace(/^#/, "");
+        a.classList.toggle("active", path === here || (here === "/" && (path === "/" || path === "")));
+        if (a.classList.contains("active")) a.setAttribute("aria-current", "page");
+        else a.removeAttribute("aria-current");
+      });
+    }
   },
   fetch(url) {
     return fetch(url);

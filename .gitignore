@@ -32,3 +32,4 @@ examples/js/*.js
 examples/rust/*.rs
 examples/page/index.html
 examples/page-react/index.html
+dist/

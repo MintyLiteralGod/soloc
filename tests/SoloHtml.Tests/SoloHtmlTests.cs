@@ -110,6 +110,72 @@ public class SoloHtmlTests
     }
 
     [Fact]
+    public void Head_control_and_link_is_not_anchor()
+    {
+        var result = SoloHtmlCompiler.Compile("""
+            page Demo theme=none
+              title Demo
+              head
+                favicon href=/favicon.svg
+                apple-touch-icon href=/apple.png
+                canonical href=https://example.com/
+                og title=Demo Site
+                link rel=preload href=/font.woff2 as=font
+                meta name=description content=Hello
+              a href=/about About
+            """);
+
+        Assert.True(result.Ok, string.Join("; ", result.Errors));
+        Assert.Contains("rel=\"icon\"", result.Html);
+        Assert.Contains("rel=\"apple-touch-icon\"", result.Html);
+        Assert.Contains("rel=\"canonical\"", result.Html);
+        Assert.Contains("property=\"og:title\"", result.Html);
+        Assert.Contains("rel=\"preload\"", result.Html);
+        Assert.Contains("<a href=\"/about\">", result.Html);
+        Assert.DoesNotContain("<a rel=\"preload\"", result.Html);
+    }
+
+    [Fact]
+    public void Layout_slot_and_button_theme_opt_in()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "solohtml-layout-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(root, "layouts"));
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "layouts", "shell.solohtml"), """
+                page theme=none
+                  title Shell
+                  nav Site
+                  main
+                    slot
+                  footer End
+                """);
+            File.WriteAllText(Path.Combine(root, "page.solohtml"), """
+                layout layouts/shell.solohtml
+                  title Home
+                  h1 Hello
+                  button primary href=#go Go
+                  button plain Plain
+                """);
+
+            var result = SoloHtmlCompiler.CompileFile(Path.Combine(root, "page.solohtml"));
+            Assert.True(result.Ok, string.Join("; ", result.Errors));
+            Assert.Contains("<title>Home</title>", result.Html);
+            Assert.Contains("<nav", result.Html);
+            Assert.Contains("<h1>Hello</h1>", result.Html);
+            Assert.Contains("footer", result.Html);
+            Assert.Contains("class=\"primary button\"", result.Html);
+            Assert.Contains("<button", result.Html);
+            // plain button should not auto-get .button theme class
+            Assert.DoesNotContain("class=\"plain button\"", result.Html);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Include_and_asset_links()
     {
         var root = Path.Combine(Path.GetTempPath(), "solohtml-inc-" + Guid.NewGuid().ToString("N"));

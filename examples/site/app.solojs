@@ -1,0 +1,5 @@
+when ready
+  solo.route.markActive("nav a")
+  on click "#menu-btn"
+    toggleClass "#site-nav" open
+    set "#menu-btn" attr aria-expanded true

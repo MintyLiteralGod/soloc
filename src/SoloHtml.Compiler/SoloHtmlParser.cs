@@ -103,10 +103,13 @@ public sealed class SoloHtmlParser
         part.Equals("bare", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsFlag(string part) =>
-        part is "primary" or "secondary" or "ghost" or "wide" or "center" or "muted" or "hero";
+        part is "primary" or "secondary" or "ghost" or "wide" or "center" or "muted" or "hero"
+            or "btn" or "styled";
 
     private static bool LooksLikeSelector(string part) =>
         (part.StartsWith('.') || part.StartsWith('#'))
+        && part.Length > 1
+        && (char.IsLetter(part[1]) || part[1] == '_')
         && !part.Contains('=');
 
     private static void ApplySelectors(Dictionary<string, string> attrs, string token)

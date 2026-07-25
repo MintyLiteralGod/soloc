@@ -57,36 +57,38 @@ public sealed class SoloHtmlParser
         var tag = parts[0].ToLowerInvariant();
         var attrs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var textParts = new List<string>();
-        var inText = false;
 
         for (var i = 1; i < parts.Count; i++)
         {
             var part = parts[i];
-            if (!inText)
+
+            // Attrs / selectors / flags stay recognized even after title text
+            // so `page Demo theme=none` works.
+            if (LooksLikeSelector(part))
             {
-                if (LooksLikeSelector(part))
-                {
-                    ApplySelectors(attrs, part);
-                    continue;
-                }
+                ApplySelectors(attrs, part);
+                continue;
+            }
 
-                var eq = part.IndexOf('=');
-                if (eq > 0)
-                {
-                    var key = part[..eq];
-                    var value = Unquote(part[(eq + 1)..]);
-                    attrs[key] = value;
-                    continue;
-                }
+            var eq = part.IndexOf('=');
+            if (eq > 0)
+            {
+                var key = part[..eq];
+                var value = Unquote(part[(eq + 1)..]);
+                attrs[key] = value;
+                continue;
+            }
 
-                // bare flag like "primary"
-                if (IsFlag(part))
-                {
-                    AppendClass(attrs, part);
-                    continue;
-                }
+            if (IsThemeOptOut(part))
+            {
+                attrs[part] = "true";
+                continue;
+            }
 
-                inText = true;
+            if (IsFlag(part))
+            {
+                AppendClass(attrs, part);
+                continue;
             }
 
             textParts.Add(Unquote(part));
@@ -95,6 +97,10 @@ public sealed class SoloHtmlParser
         var text = textParts.Count == 0 ? null : string.Join(' ', textParts);
         return new ParsedLine(tag, text, attrs);
     }
+
+    private static bool IsThemeOptOut(string part) =>
+        part.Equals("notheme", StringComparison.OrdinalIgnoreCase) ||
+        part.Equals("bare", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsFlag(string part) =>
         part is "primary" or "secondary" or "ghost" or "wide" or "center" or "muted" or "hero";

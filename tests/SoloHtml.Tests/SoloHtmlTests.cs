@@ -65,6 +65,51 @@ public class SoloHtmlTests
     }
 
     [Fact]
+    public void Default_theme_included_unless_opted_out()
+    {
+        var withTheme = SoloHtmlCompiler.Compile("""
+            page Demo
+              title Demo
+              h1 Hi
+            """);
+        Assert.True(withTheme.Ok, string.Join("; ", withTheme.Errors));
+        Assert.Contains("color-scheme: light", withTheme.Html);
+
+        var themeNone = SoloHtmlCompiler.Compile("""
+            page Demo theme=none
+              title Demo
+              h1 Hi
+            """);
+        Assert.True(themeNone.Ok, string.Join("; ", themeNone.Errors));
+        Assert.DoesNotContain("color-scheme: light", themeNone.Html);
+
+        var notheme = SoloHtmlCompiler.Compile("""
+            page Demo notheme
+              title Demo
+              h1 Hi
+            """);
+        Assert.True(notheme.Ok, string.Join("; ", notheme.Errors));
+        Assert.DoesNotContain("color-scheme: light", notheme.Html);
+
+        var withCss = SoloHtmlCompiler.Compile("""
+            page Demo
+              title Demo
+              css href=app.css
+              h1 Hi
+            """);
+        Assert.True(withCss.Ok, string.Join("; ", withCss.Errors));
+        Assert.DoesNotContain("color-scheme: light", withCss.Html);
+
+        var forcedOff = SoloHtmlCompiler.Compile("""
+            page Demo
+              title Demo
+              h1 Hi
+            """, emitOptions: new SoloHtmlEmitOptions { IncludeDefaultTheme = false });
+        Assert.True(forcedOff.Ok, string.Join("; ", forcedOff.Errors));
+        Assert.DoesNotContain("color-scheme: light", forcedOff.Html);
+    }
+
+    [Fact]
     public void Include_and_asset_links()
     {
         var root = Path.Combine(Path.GetTempPath(), "solohtml-inc-" + Guid.NewGuid().ToString("N"));

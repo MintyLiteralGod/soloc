@@ -12,16 +12,17 @@ static int Run(string[] args)
 
     return args[0] switch
     {
-        "build" or "b" => Build(args),
+        "build" or "b" => Build(args, watch: false),
+        "watch" or "w" => Build(args, watch: true),
         "new" or "n" => NewProject(args),
         "version" or "--version" or "-v" => PrintVersion(),
         "studio" or "hub" => PrintHubHint(),
-        _ when Directory.Exists(args[0]) => Build(["build", .. args]),
+        _ when Directory.Exists(args[0]) => Build(["build", .. args], watch: false),
         _ => Unknown(args[0]),
     };
 }
 
-static int Build(string[] args)
+static int Build(string[] args, bool watch)
 {
     string? dir = null;
     string? outPath = null;
@@ -32,7 +33,71 @@ static int Build(string[] args)
     }
 
     dir ??= ".";
-    var result = SoloPageCompiler.Build(dir);
+    var projectDir = Path.GetFullPath(dir);
+    outPath ??= Path.Combine(projectDir, "index.html");
+
+    if (!watch)
+        return BuildOnce(projectDir, outPath);
+
+    Console.WriteLine($"Watching {projectDir} — rebuild on .solohtml / .solocss / .solojs save");
+    Console.WriteLine("Press Ctrl+C to stop.");
+
+    using var cts = new CancellationTokenSource();
+    Console.CancelKeyPress += (_, e) =>
+    {
+        e.Cancel = true;
+        cts.Cancel();
+    };
+
+    BuildOnce(projectDir, outPath);
+
+    using var watcher = new FileSystemWatcher(projectDir)
+    {
+        IncludeSubdirectories = true,
+        NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
+        Filter = "*.*",
+    };
+
+    var pending = false;
+    void OnChange(object _, FileSystemEventArgs e)
+    {
+        if (!IsSoloSource(e.FullPath) || Path.GetFullPath(e.FullPath) == Path.GetFullPath(outPath))
+            return;
+        pending = true;
+    }
+
+    watcher.Changed += OnChange;
+    watcher.Created += OnChange;
+    watcher.Renamed += OnChange;
+    watcher.EnableRaisingEvents = true;
+
+    try
+    {
+        while (!cts.IsCancellationRequested)
+        {
+            if (pending)
+            {
+                pending = false;
+                Thread.Sleep(80); // coalesce save bursts
+                if (pending)
+                    continue;
+                BuildOnce(projectDir, outPath);
+            }
+
+            Thread.Sleep(100);
+        }
+    }
+    catch (OperationCanceledException)
+    {
+        // normal exit
+    }
+
+    return 0;
+}
+
+static int BuildOnce(string projectDir, string outPath)
+{
+    var result = SoloPageCompiler.Build(projectDir);
     if (!result.Ok)
     {
         foreach (var e in result.Errors)
@@ -40,13 +105,20 @@ static int Build(string[] args)
         return 1;
     }
 
-    outPath ??= Path.Combine(Path.GetFullPath(dir), "index.html");
     File.WriteAllText(outPath, result.Html);
     Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Wrote {outPath}");
     if (result.HtmlPath is not null) Console.WriteLine($"  html: {result.HtmlPath}");
     if (result.CssPath is not null) Console.WriteLine($"  css:  {result.CssPath}");
     if (result.JsPath is not null) Console.WriteLine($"  js:   {result.JsPath}");
     return 0;
+}
+
+static bool IsSoloSource(string path)
+{
+    var ext = Path.GetExtension(path);
+    return ext.Equals(".solohtml", StringComparison.OrdinalIgnoreCase)
+        || ext.Equals(".solocss", StringComparison.OrdinalIgnoreCase)
+        || ext.Equals(".solojs", StringComparison.OrdinalIgnoreCase);
 }
 
 static int NewProject(string[] args)
@@ -58,16 +130,14 @@ static int NewProject(string[] args)
 
     File.WriteAllText(Path.Combine(dir, "page.solohtml"),
         """
-        page SoloPage
+        page SoloPage theme=none
           title Hello SoloPage
-          css href=styles.css
           hero
             brand SoloGem
             h1 Hello, SoloPage
             p SoloHTML + SoloCSS + SoloJS in one folder.
             button primary href=#go Get started
           include components/footer.solohtml
-          js src=app.js
         """);
 
     File.WriteAllText(Path.Combine(dir, "components", "footer.solohtml"),
@@ -123,6 +193,7 @@ static int NewProject(string[] args)
     Console.WriteLine($"Created SoloPage project: {dir}");
     Console.WriteLine("Next:");
     Console.WriteLine($"  solopage build {name}");
+    Console.WriteLine($"  solopage watch {name}");
     return 0;
 }
 
@@ -137,9 +208,9 @@ static int PrintHubHint()
     Console.WriteLine(
         """
         Solo5 Hub (all languages):
-
+        
           dotnet run --project src/Solo5.Hub
-
+        
         Then open http://localhost:5080
         """);
     return 0;
@@ -156,22 +227,28 @@ static void PrintHelp()
 {
     Console.WriteLine(
         """
-        SoloPage — bundle SoloHTML + SoloCSS + SoloJS (Solo5)
+        SoloPage — assemble SoloHTML + SoloCSS + SoloJS (Solo5)
+
+        A folder is the unit. Not a framework — one compile into index.html.
 
         Usage:
           solopage new <name>
           solopage build [folder] [--out index.html]
+          solopage watch [folder] [--out index.html]
           solopage hub
           solopage version
 
         A SoloPage folder usually contains:
-  page.solohtml
-  styles.solocss
-  app.solojs
+          page.solohtml
+          styles.solocss
+          app.solojs
 
-React: if `app.solojs` uses `component` / `mount`, SoloPage
-injects React 18 UMD scripts automatically.
+        When styles.solocss is present, SoloHTML's default theme is skipped
+        so your SoloCSS owns the look.
 
-See examples/page-react for a working SoloJS + React site.
+        React: if app.solojs uses component / mount, SoloPage
+        injects React 18 UMD scripts automatically.
+
+        See examples/page-react for a working SoloJS + React site.
         """);
 }

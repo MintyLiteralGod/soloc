@@ -65,4 +65,22 @@ public class SoloCssTests
         Assert.True(result.Ok, string.Join("; ", result.Errors));
         Assert.Contains(".card:hover", result.Css);
     }
+
+    [Fact]
+    public void Hash_is_not_a_comment_slash_slash_is()
+    {
+        var result = SoloCssCompiler.Compile(
+            """
+            // ignored comment
+            #hero
+              color #0f2a22
+              background #fff
+            """);
+
+        Assert.True(result.Ok, string.Join("; ", result.Errors));
+        Assert.Contains("#hero", result.Css);
+        Assert.Contains("color: #0f2a22", result.Css);
+        Assert.Contains("background: #fff", result.Css);
+        Assert.DoesNotContain("ignored comment", result.Css);
+    }
 }

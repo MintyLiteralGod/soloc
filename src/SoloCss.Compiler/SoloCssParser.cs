@@ -18,7 +18,8 @@ public sealed class SoloCssParser
 
             var indent = CountIndent(raw);
             var text = raw.Trim();
-            if (text.StartsWith("//") || text.StartsWith('#'))
+            // Comments are // only — # starts colors (#fff) and id selectors (#hero).
+            if (text.StartsWith("//"))
                 continue;
 
             while (stack.Count > 1 && indent <= stack.Peek().Indent)

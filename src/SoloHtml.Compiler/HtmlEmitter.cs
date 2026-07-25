@@ -10,6 +10,15 @@ public sealed class HtmlEmitter
         "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr",
     };
 
+    private readonly bool _forceDefaultTheme;
+    private readonly bool? _includeDefaultTheme;
+
+    public HtmlEmitter(bool? includeDefaultTheme = null, bool forceDefaultTheme = false)
+    {
+        _includeDefaultTheme = includeDefaultTheme;
+        _forceDefaultTheme = forceDefaultTheme;
+    }
+
     public string Emit(SoloHtmlDocument document, string? pageTitle = null)
     {
         var sb = new StringBuilder();
@@ -24,15 +33,19 @@ public sealed class HtmlEmitter
         else
         {
             // Wrap fragments in a minimal page shell for preview friendliness.
+            var useTheme = ShouldIncludeDefaultTheme(roots);
             sb.AppendLine("<!DOCTYPE html>");
             sb.AppendLine("<html lang=\"en\">");
             sb.AppendLine("<head>");
             sb.AppendLine("  <meta charset=\"utf-8\" />");
             sb.AppendLine("  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />");
             sb.AppendLine($"  <title>{WebUtility.HtmlEncode(pageTitle ?? "SoloHTML")}</title>");
-            sb.AppendLine("  <style>");
-            sb.AppendLine(DefaultCss);
-            sb.AppendLine("  </style>");
+            if (useTheme)
+            {
+                sb.AppendLine("  <style>");
+                sb.AppendLine(DefaultCss);
+                sb.AppendLine("  </style>");
+            }
             sb.AppendLine("</head>");
             sb.AppendLine("<body>");
             foreach (var root in roots)
@@ -43,6 +56,30 @@ public sealed class HtmlEmitter
 
         return sb.ToString();
     }
+
+    private bool ShouldIncludeDefaultTheme(IReadOnlyList<SoloHtmlNode> roots)
+    {
+        if (_forceDefaultTheme)
+            return true;
+        if (_includeDefaultTheme is { } forced)
+            return forced;
+
+        foreach (var root in roots)
+        {
+            if (WantsNoDefaultTheme(root))
+                return false;
+            if (root.Children.Any(c => c.Tag is "css" or "stylesheet"))
+                return false;
+        }
+
+        return true;
+    }
+
+    private static bool WantsNoDefaultTheme(SoloHtmlNode node) =>
+        (node.Attributes.TryGetValue("theme", out var theme) &&
+         theme.Equals("none", StringComparison.OrdinalIgnoreCase))
+        || node.Attributes.ContainsKey("notheme")
+        || node.Attributes.ContainsKey("bare");
 
     private void EmitNode(StringBuilder sb, SoloHtmlNode node, int depth, string? pageTitle)
     {
@@ -144,18 +181,23 @@ public sealed class HtmlEmitter
             sb.AppendLine(" />");
         }
 
+        var useTheme = ShouldIncludeDefaultTheme(new[] { page });
         var customStyle = page.Children.FirstOrDefault(c => c.Tag == "style");
-        sb.AppendLine("  <style>");
-        sb.AppendLine(DefaultCss);
-        if (customStyle is not null)
+        if (useTheme || customStyle is not null)
         {
-            if (!string.IsNullOrWhiteSpace(customStyle.Text))
-                sb.AppendLine(customStyle.Text);
-            foreach (var child in customStyle.Children)
-                sb.AppendLine(string.IsNullOrWhiteSpace(child.Text) ? child.Tag : $"{child.Tag} {child.Text}");
-        }
+            sb.AppendLine("  <style>");
+            if (useTheme)
+                sb.AppendLine(DefaultCss);
+            if (customStyle is not null)
+            {
+                if (!string.IsNullOrWhiteSpace(customStyle.Text))
+                    sb.AppendLine(customStyle.Text);
+                foreach (var child in customStyle.Children)
+                    sb.AppendLine(string.IsNullOrWhiteSpace(child.Text) ? child.Tag : $"{child.Tag} {child.Text}");
+            }
 
-        sb.AppendLine("  </style>");
+            sb.AppendLine("  </style>");
+        }
 
         foreach (var css in page.Children.Where(c => c.Tag is "css" or "stylesheet"))
             EmitStylesheetLink(sb, css, "  ");

@@ -1,8 +1,8 @@
 # SoloPage
 
-**Bundle SoloHTML + SoloCSS + SoloJS into one site** — SoloGem Solo5.
+**Assemble SoloHTML + SoloCSS + SoloJS into one `index.html`** — SoloGem Solo5.
 
-A SoloPage project is just a folder:
+Not a full web framework. A SoloPage project is just a folder; one compile stitches the three languages.
 
 ```text
 mysite/
@@ -26,6 +26,8 @@ mysite/
 dotnet run --project src/SoloPage.Cli -- new mysite
 dotnet run --project src/SoloPage.Cli -- build mysite
 # → mysite/index.html
+
+dotnet run --project src/SoloPage.Cli -- watch mysite
 ```
 
 Or build the repo sample:
@@ -44,10 +46,10 @@ dotnet run --project src/Solo5.Hub
 
 Open **http://localhost:5080**
 
-## How bundling works
+## How assembling works
 
 1. Compile `page.solohtml` (supports `include`, `css`, `js`)
-2. Compile `styles.solocss`
+2. Compile `styles.solocss` — when present, SoloHTML’s default theme is skipped
 3. Compile `app.solojs`
 4. Inline CSS + JS into a single `index.html` (default)
 5. If SoloJS uses React (`component` / `mount`), inject React 18 UMD scripts

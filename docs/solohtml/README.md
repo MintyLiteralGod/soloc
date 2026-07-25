@@ -63,6 +63,7 @@ page Hello
 | `include nav.solohtml` | Splice in another SoloHTML file |
 | `css href=app.css` | `<link rel="stylesheet">` |
 | `js src=app.js` | `<script src>` at end of body |
+| `page theme=none` / `notheme` / `bare` | Skip SoloHTML’s default theme CSS |
 | `// comment` | Ignored |
 
 ## Components (`include`)
@@ -78,6 +79,14 @@ page Site
 ```
 
 Paths are resolved relative to the current file. Cycles are rejected.
+
+## Default theme
+
+SoloHTML injects a small starter stylesheet for Studio demos. Opt out when you bring your own CSS:
+
+- `page MySite theme=none` (or `notheme` / `bare`)
+- any `css` / `stylesheet` link on the page
+- SoloPage with a `.solocss` file (theme off automatically)
 
 ## Why SoloHTML?
 

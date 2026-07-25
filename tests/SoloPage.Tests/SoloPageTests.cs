@@ -27,6 +27,8 @@ public class SoloPageTests
             Assert.Contains("<h1", result.Html);
             Assert.Contains("margin: 0", result.Html);
             Assert.Contains("console.log(\"ok\")", result.Html);
+            // SoloCSS owns the look — SoloHTML default theme stays out.
+            Assert.DoesNotContain("color-scheme: light", result.Html);
         }
         finally
         {

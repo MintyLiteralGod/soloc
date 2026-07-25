@@ -23,11 +23,6 @@ public static class SoloPageCompiler
         if (htmlPath is null)
             return SoloPageResult.Fail(["SoloPage needs a .solohtml file (e.g. page.solohtml)."]);
 
-        var htmlSource = File.ReadAllText(htmlPath);
-        var htmlResult = SoloHtmlCompiler.Compile(htmlSource, options.Title, Path.GetDirectoryName(htmlPath));
-        if (!htmlResult.Ok)
-            return SoloPageResult.Fail(htmlResult.Errors.Select(e => $"SoloHTML: {e}").ToArray());
-
         string? css = null;
         if (cssPath is not null)
         {
@@ -36,6 +31,20 @@ public static class SoloPageCompiler
                 return SoloPageResult.Fail(cssResult.Errors.Select(e => $"SoloCSS: {e}").ToArray());
             css = cssResult.Css;
         }
+
+        // SoloPage owns styling when a .solocss is present — don't inject SoloHTML's default theme.
+        var emitOptions = cssPath is not null
+            ? new SoloHtmlEmitOptions { IncludeDefaultTheme = false }
+            : null;
+
+        var htmlSource = File.ReadAllText(htmlPath);
+        var htmlResult = SoloHtmlCompiler.Compile(
+            htmlSource,
+            options.Title,
+            Path.GetDirectoryName(htmlPath),
+            emitOptions);
+        if (!htmlResult.Ok)
+            return SoloPageResult.Fail(htmlResult.Errors.Select(e => $"SoloHTML: {e}").ToArray());
 
         string? js = null;
         var usesReact = false;

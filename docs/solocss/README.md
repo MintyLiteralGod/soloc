@@ -67,7 +67,7 @@ media max-width 640px
 - **`&` parent** — `.card` + `&:hover` → `.card:hover`
 - **Media queries** — `media max-width 640px` or `@media (max-width: 640px)`
 - **Shortcuts** — see cheat sheet below
-- **Comments** — `//` or `#`
+- **Comments** — `//` only (`#` is for colors and id selectors)
 
 ## Property cheat sheet
 

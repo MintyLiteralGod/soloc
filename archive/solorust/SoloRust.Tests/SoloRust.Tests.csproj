@@ -16,6 +16,6 @@
     <Using Include="Xunit" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\SoloRust.Compiler\SoloRust.Compiler.csproj" />
+    <ProjectReference Include="..\SoloRust.Compiler\SoloRust.Compiler.csproj" />
   </ItemGroup>
 </Project>

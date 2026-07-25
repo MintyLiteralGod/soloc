@@ -1,0 +1,7 @@
+name = "SoloLua"
+print "Hello, {name}"
+
+fn add(a, b)
+  return a + b
+
+print "2 + 40 = {add(2, 40)}"

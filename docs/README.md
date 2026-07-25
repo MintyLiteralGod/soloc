@@ -12,7 +12,8 @@ Start here if you're new. Use the reference when you need a precise answer.
 | SoloHTML | [Guide](solohtml/README.md) · [Studio](solohtml/studio.md) |
 | SoloCSS | [Guide](solocss/README.md) · [Studio](solocss/studio.md) |
 | SoloJS | [Guide](solojs/README.md) · [Studio](solojs/studio.md) |
-| SoloRUST | [Guide](solorust/README.md) · [Research](solorust/research.md) · [Studio](solorust/studio.md) |
+| SoloLua | [Guide](sololua/README.md) · [Studio](sololua/studio.md) |
+| SoloRUST *(archived)* | [Archive](../archive/solorust/README.md) · [old docs](../archive/solorust/docs/README.md) |
 
 **[Solo5 overview →](solo5/README.md)** · [SoloPage](solopage/README.md)
 

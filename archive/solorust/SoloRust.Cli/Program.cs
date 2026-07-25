@@ -213,7 +213,7 @@ static int PrintNotes()
           - traits / generics deep dive
           - unsafe
 
-        See docs/solorust/README.md and docs/solorust/research.md
+        See archive/solorust/README.md (archived — SoloLua is Solo5 #5 now)
         """);
     return 0;
 }
@@ -224,9 +224,9 @@ static int PrintStudioHint()
         """
         SoloRUST Studio (GUI):
 
-          dotnet run --project src/SoloRust.Studio
+          dotnet run --project archive/solorust/SoloRust.Studio
 
-        Then open http://localhost:5092
+        Then open http://localhost:5099
         """);
     return 0;
 }
@@ -252,6 +252,6 @@ static void PrintHelp()
           solorust notes
           solorust version
 
-        Docs: docs/solorust/README.md
+        Archived docs: archive/solorust/docs/README.md
         """);
 }

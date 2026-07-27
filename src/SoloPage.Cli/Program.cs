@@ -393,24 +393,21 @@ static void PrintHelp()
 {
     Console.WriteLine(
         """
-        SoloPage — assemble SoloHTML + SoloCSS + SoloJS (Solo5)
+        SoloPage — assemble SoloHTML + SoloCSS + SoloJS into a site (Solo5)
 
         Usage:
           solopage new <name> [--site]
-          solopage build [folder] [--out dist|index.html] [--inline]
+          solopage build [folder] [--out dist] [--base-url https://site] [--inline]
           solopage watch [folder]
           solopage hub
           solopage version
 
-        Single page:
-          page.solohtml + styles.solocss + app.solojs → index.html
+        Site mode (pages/ + site.json):
+          pages/*.solohtml     → dist/.../index.html
+          data + templates     → SEO routes from JSON
+          public/              → copied into dist/
+          _redirects, sitemap.xml, robots.txt
 
-        Site mode (pages/ folder):
-          pages/index.solohtml     → dist/index.html        (/)
-          pages/deskcore.solohtml  → dist/deskcore/index.html (/deskcore/)
-          + shared assets/site.css + assets/site.js
-
-        Layouts: `layout layouts/shell.solohtml` with a `slot` in the shell.
-        Head: favicon, og, canonical, link, meta — `link` is HTML <link>, use `a` for anchors.
+        See docs/solopage/README.md and examples/site
         """);
 }

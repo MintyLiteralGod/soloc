@@ -25,7 +25,7 @@ Each language removes a different kind of friction:
 - **SoloCSS** — vars, nesting, shortcuts → real CSS (`#` is color/id, not a comment)
 - **SoloJS** — browser scripts, fetch/timers, optional React
 - **SoloLua** — Lua’s runtime without globals-by-default, nil holes, or metatable class pain
-- **SoloPage** — one folder → one page or a multi-route site (`pages/` + layouts)
+- **SoloPage** — multi-route sites: layouts, shared CSS, `public/`, data→pages, Netlify `_redirects` / sitemap
 
 ## Quick start
 

@@ -1,0 +1,13 @@
+page theme=none
+  head
+    favicon href=/favicon.svg
+    apple-touch-icon href=/apple-touch-icon.png
+    meta name=description content=SoloPage site toolchain
+    og title=SoloPage
+    og description=Multi-page Solo5 site
+    twitter card=summary
+    twitter title=SoloPage
+  include ../components/nav.solohtml
+  main
+    slot
+  include ../components/footer.solohtml

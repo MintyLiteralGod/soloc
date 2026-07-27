@@ -1,0 +1,14 @@
+[
+  {
+    "slug": "ship-static",
+    "title": "Ship static, stay fast",
+    "description": "Why SoloPage sites stay lean on Netlify.",
+    "body": "One design system, many routes, no framework tax."
+  },
+  {
+    "slug": "forms-without-drama",
+    "title": "Forms without drama",
+    "description": "Submit contact forms from SoloJS.",
+    "body": "formData + fetch with mode=no-cors for Google Forms, or Netlify Forms."
+  }
+]

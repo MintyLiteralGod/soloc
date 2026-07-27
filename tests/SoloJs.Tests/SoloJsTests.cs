@@ -26,6 +26,63 @@ public class SoloJsTests
     }
 
     [Fact]
+    public void Compiles_fetch_options_visible_clipboard_formdata()
+    {
+        var result = SoloJsCompiler.Compile(
+            """
+            when ready
+              when visible ".card"
+                addClass ".card" revealed
+              on submit "#contact"
+                preventDefault
+                formData "#contact" into payload
+                fetch "https://example.com/form" method=POST body="form #contact" mode=no-cors
+                  set "#ok" text "sent"
+                catch
+                  set "#ok" text "fail"
+              copy "hello"
+              on scroll window
+                print window.scrollY
+            """);
+
+        Assert.True(result.Ok, string.Join("; ", result.Errors));
+        Assert.Contains("solo.whenVisible(\".card\"", result.JavaScript);
+        Assert.Contains("solo.formData(\"#contact\")", result.JavaScript);
+        Assert.Contains("method: \"POST\"", result.JavaScript);
+        Assert.Contains("mode: \"no-cors\"", result.JavaScript);
+        Assert.Contains("body: solo.formData(\"#contact\")", result.JavaScript);
+        Assert.Contains("solo.clipboard(", result.JavaScript);
+        Assert.Contains("window.addEventListener(\"scroll\"", result.JavaScript);
+    }
+
+    [Fact]
+    public void Compiles_classlist_canvas_and_events()
+    {
+        var result = SoloJsCompiler.Compile(
+            """
+            when ready
+              canvas "#c" into gfx
+              on click "#btn"
+                preventDefault
+                toggleClass "#nav" open
+                set "#btn" attr aria-expanded true
+                set "#nav" style.display flex
+              frame
+                print gfx.width
+            """);
+
+        Assert.True(result.Ok, string.Join("; ", result.Errors));
+        Assert.Contains("solo.canvas(\"#c\")", result.JavaScript);
+        Assert.Contains("(e) =>", result.JavaScript);
+        Assert.Contains("e.preventDefault()", result.JavaScript);
+        Assert.Contains("solo.toggleClass(\"#nav\", \"open\")", result.JavaScript);
+        Assert.Contains("attr.aria-expanded", result.JavaScript);
+        Assert.Contains("style.display", result.JavaScript);
+        Assert.Contains("solo.frame(() =>", result.JavaScript);
+        Assert.Contains("markActive", result.JavaScript);
+    }
+
+    [Fact]
     public void Compiles_dom_helpers_and_reassign()
     {
         var result = SoloJsCompiler.Compile(

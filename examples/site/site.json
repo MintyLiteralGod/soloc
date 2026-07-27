@@ -1,0 +1,14 @@
+{
+  "baseUrl": "https://example.com",
+  "generateRedirects": true,
+  "generateSitemap": true,
+  "generateRobots": true,
+  "collections": [
+    {
+      "data": "data/tips.json",
+      "template": "templates/tip.solohtml",
+      "out": "tips/{{slug}}/index.html",
+      "route": "/tips/{{slug}}"
+    }
+  ]
+}

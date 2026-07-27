@@ -25,7 +25,7 @@ Each language removes a different kind of friction:
 - **SoloCSS** — vars, nesting, shortcuts → real CSS (`#` is color/id, not a comment)
 - **SoloJS** — browser scripts, fetch/timers, optional React
 - **SoloLua** — Lua’s runtime without globals-by-default, nil holes, or metatable class pain
-- **SoloPage** — one folder → one site
+- **SoloPage** — multi-route sites: layouts, shared CSS, `public/`, data→pages, Netlify `_redirects` / sitemap
 
 ## Quick start
 
@@ -50,6 +50,7 @@ dotnet run --project src/SoloCss.Cli -- compile examples/css/hello.solocss
 dotnet run --project src/SoloJs.Cli -- compile examples/js/fetch-timer.solojs
 dotnet run --project src/SoloLua.Cli -- compile examples/lua/showcase.sololua
 dotnet run --project src/SoloPage.Cli -- build examples/page
+dotnet run --project src/SoloPage.Cli -- build examples/site
 ```
 
 ## Docs map

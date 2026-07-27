@@ -1,0 +1,7 @@
+layout ../layouts/shell.solohtml
+  title Home
+  hero
+    brand SoloGem
+    h1 Multi-page SoloPage
+    p Shared layout, real head tags, SoloCSS tokens.
+    a.btn.primary href=/deskcore Open DeskCore

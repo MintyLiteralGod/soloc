@@ -132,19 +132,57 @@ public sealed class JsEmitter
                 break;
 
             case SoloJsOn on:
-                sb.Append(pad).Append("solo.on(").Append(JsString(on.Selector)).Append(", ")
-                    .Append(JsString(on.EventName)).AppendLine(", () => {");
+            {
+                var selExpr = on.Selector is "window" or "document" or "body"
+                    ? on.Selector
+                    : JsString(on.Selector);
+                if (on.Selector is "window" or "document" or "body")
+                {
+                    sb.Append(pad).Append(on.Selector).Append(".addEventListener(")
+                        .Append(JsString(on.EventName)).AppendLine(", (e) => {");
+                }
+                else
+                {
+                    sb.Append(pad).Append("solo.on(").Append(selExpr).Append(", ")
+                        .Append(JsString(on.EventName)).AppendLine(", (e) => {");
+                }
                 EmitBlock(sb, on.Body, depth + 1, declared, stateVars);
                 sb.Append(pad).AppendLine("});");
                 break;
+            }
 
             case SoloJsFetch fetch:
             {
                 var urlExpr = fetch.Url.StartsWith('"') || fetch.Url.StartsWith('\'') || fetch.Url.StartsWith('`')
                     ? fetch.Url
                     : JsString(fetch.Url);
-                sb.Append(pad).Append("solo.fetch(").Append(urlExpr).AppendLine(").then(async (__res) => {");
-                sb.Append(pad).AppendLine("  const __data = await __res.text();");
+                var opts = new List<string>();
+                if (!string.IsNullOrWhiteSpace(fetch.Method))
+                    opts.Add($"method: {JsString(fetch.Method!)}");
+                if (!string.IsNullOrWhiteSpace(fetch.Mode))
+                    opts.Add($"mode: {JsString(fetch.Mode!)}");
+                if (!string.IsNullOrWhiteSpace(fetch.Headers))
+                    opts.Add($"headers: {fetch.Headers}");
+                if (!string.IsNullOrWhiteSpace(fetch.Body))
+                {
+                    var body = fetch.Body!;
+                    if (body.StartsWith("form ", StringComparison.OrdinalIgnoreCase))
+                        opts.Add($"body: solo.formData({JsString(UnquoteSimple(body[5..].Trim()))})");
+                    else if (body.StartsWith("formData ", StringComparison.OrdinalIgnoreCase))
+                        opts.Add($"body: solo.formData({JsString(UnquoteSimple(body["formData ".Length..].Trim()))})");
+                    else if (body.StartsWith('{') || body.StartsWith('[') || IsIdent(body))
+                        opts.Add($"body: {body}");
+                    else
+                        opts.Add($"body: {JsString(UnquoteSimple(body))}");
+                }
+
+                var optsExpr = opts.Count == 0 ? "" : ", { " + string.Join(", ", opts) + " }";
+                sb.Append(pad).Append("solo.fetch(").Append(urlExpr).Append(optsExpr)
+                    .AppendLine(").then(async (__res) => {");
+                if (fetch.AsJson)
+                    sb.Append(pad).AppendLine("  const __data = await __res.json();");
+                else
+                    sb.Append(pad).AppendLine("  const __data = await __res.text();");
                 if (!string.IsNullOrWhiteSpace(fetch.Into))
                 {
                     if (declared.Add(fetch.Into!))
@@ -164,6 +202,30 @@ public sealed class JsEmitter
                 break;
             }
 
+            case SoloJsWhenVisible vis:
+                sb.Append(pad).Append("solo.whenVisible(").Append(JsString(vis.Selector)).AppendLine(", () => {");
+                EmitBlock(sb, vis.Body, depth + 1, declared, stateVars);
+                sb.Append(pad).AppendLine("});");
+                break;
+
+            case SoloJsClipboard clip:
+            {
+                var val = clip.Value.StartsWith('"') || clip.Value.StartsWith('\'') || IsIdent(clip.Value)
+                    ? RewriteStateExpr(clip.Value, stateVars)
+                    : JsString(clip.Value);
+                sb.Append(pad).Append("solo.clipboard(").Append(val).AppendLine(");");
+                break;
+            }
+
+            case SoloJsFormData fd:
+                if (declared.Add(fd.Into))
+                    sb.Append(pad).Append("const ").Append(fd.Into).Append(" = solo.formData(")
+                        .Append(JsString(fd.Selector)).AppendLine(");");
+                else
+                    sb.Append(pad).Append(fd.Into).Append(" = solo.formData(")
+                        .Append(JsString(fd.Selector)).AppendLine(");");
+                break;
+
             case SoloJsAfter after:
                 sb.Append(pad).Append("solo.after(").Append(after.DelayMs).AppendLine(", () => {");
                 EmitBlock(sb, after.Body, depth + 1, declared, stateVars);
@@ -178,7 +240,49 @@ public sealed class JsEmitter
 
             case SoloJsSet set:
                 sb.Append(pad).Append("solo.set(").Append(JsString(set.Selector)).Append(", ")
-                    .Append(JsString(set.Property)).Append(", ").Append(set.Value).AppendLine(");");
+                    .Append(JsString(set.Property)).Append(", ")
+                    .Append(RewriteStateExpr(set.Value, stateVars)).AppendLine(");");
+                break;
+
+            case SoloJsClassOp cls:
+                sb.Append(pad).Append("solo.").Append(cls.Op).Append("Class(")
+                    .Append(JsString(cls.Selector)).Append(", ")
+                    .Append(JsString(cls.ClassName)).AppendLine(");");
+                break;
+
+            case SoloJsFocus focus:
+                sb.Append(pad).Append("solo.focus(").Append(JsString(focus.Selector)).AppendLine(");");
+                break;
+
+            case SoloJsPreventDefault:
+                sb.Append(pad).AppendLine("e.preventDefault();");
+                break;
+
+            case SoloJsStopPropagation:
+                sb.Append(pad).AppendLine("e.stopPropagation();");
+                break;
+
+            case SoloJsFrame frame:
+                sb.Append(pad).AppendLine("solo.frame(() => {");
+                EmitBlock(sb, frame.Body, depth + 1, declared, stateVars);
+                sb.Append(pad).AppendLine("});");
+                break;
+
+            case SoloJsCanvas canvas:
+                if (!string.IsNullOrWhiteSpace(canvas.Into) && declared.Add(canvas.Into!))
+                {
+                    sb.Append(pad).Append("const ").Append(canvas.Into).Append(" = solo.canvas(")
+                        .Append(JsString(canvas.Selector)).AppendLine(");");
+                }
+                else if (!string.IsNullOrWhiteSpace(canvas.Into))
+                {
+                    sb.Append(pad).Append(canvas.Into).Append(" = solo.canvas(")
+                        .Append(JsString(canvas.Selector)).AppendLine(");");
+                }
+                else
+                {
+                    sb.Append(pad).Append("solo.canvas(").Append(JsString(canvas.Selector)).AppendLine(");");
+                }
                 break;
 
             case SoloJsPrint p:
@@ -360,6 +464,14 @@ public sealed class JsEmitter
         else sb.AppendLine();
     }
 
+    private static string UnquoteSimple(string s)
+    {
+        s = s.Trim();
+        if (s.Length >= 2 && ((s[0] == '"' && s[^1] == '"') || (s[0] == '\'' && s[^1] == '\'')))
+            return s[1..^1];
+        return s;
+    }
+
     private static string RewriteStateExpr(string expr, HashSet<string>? stateVars) => expr;
 
     private static string SetterName(string state) =>
@@ -387,10 +499,13 @@ const solo = {
   $(sel) {
     return document.querySelector(sel);
   },
+  $$(sel) {
+    return Array.from(document.querySelectorAll(sel));
+  },
   on(sel, eventName, handler) {
-    const el = this.$(sel);
-    if (!el) { console.warn("SoloJS: no element for", sel); return; }
-    el.addEventListener(eventName, handler);
+    const nodes = this.$$(sel);
+    if (!nodes.length) { console.warn("SoloJS: no element for", sel); return; }
+    nodes.forEach((el) => el.addEventListener(eventName, handler));
   },
   set(sel, prop, value) {
     const el = this.$(sel);
@@ -399,10 +514,107 @@ const solo = {
     else if (prop === "html") el.innerHTML = value;
     else if (prop === "value") el.value = value;
     else if (prop === "class") el.className = value;
+    else if (prop === "focus") { el.focus(); }
+    else if (prop === "hidden") el.hidden = !!value && value !== "false";
+    else if (prop === "disabled") el.disabled = !!value && value !== "false";
+    else if (prop === "checked") el.checked = !!value && value !== "false";
+    else if (prop === "style" && value && typeof value === "object") Object.assign(el.style, value);
+    else if (prop.startsWith("style.")) el.style[prop.slice(6)] = value;
+    else if (prop.startsWith("dataset.")) el.dataset[prop.slice(8)] = value;
+    else if (prop.startsWith("attr.")) el.setAttribute(prop.slice(5), value);
     else el.setAttribute(prop, value);
   },
-  fetch(url) {
-    return fetch(url);
+  addClass(sel, name) {
+    const el = this.$(sel);
+    if (el) el.classList.add(name);
+  },
+  removeClass(sel, name) {
+    const el = this.$(sel);
+    if (el) el.classList.remove(name);
+  },
+  toggleClass(sel, name) {
+    const el = this.$(sel);
+    if (el) el.classList.toggle(name);
+  },
+  focus(sel) {
+    const el = this.$(sel);
+    if (el) el.focus();
+  },
+  frame(handler) {
+    return requestAnimationFrame(handler);
+  },
+  canvas(sel) {
+    const el = this.$(sel);
+    if (!el) { console.warn("SoloJS: no canvas for", sel); return null; }
+    const ctx = el.getContext("2d");
+    return {
+      el,
+      ctx,
+      width: el.width,
+      height: el.height,
+      clear() { ctx.clearRect(0, 0, el.width, el.height); },
+      resize(w, h) { el.width = w; el.height = h; this.width = w; this.height = h; },
+      fill(color) { ctx.fillStyle = color; ctx.fillRect(0, 0, el.width, el.height); },
+    };
+  },
+  route: {
+    path() {
+      const meta = document.querySelector('meta[name="solo:route"]');
+      if (meta && meta.content) return meta.content;
+      return location.hash ? location.hash.replace(/^#/, "") || "/" : location.pathname.replace(/\/$/, "") || "/";
+    },
+    go(path, { hash = false } = {}) {
+      if (hash) location.hash = path.startsWith("#") ? path : "#" + path;
+      else history.pushState({}, "", path);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    },
+    onChange(handler) {
+      window.addEventListener("hashchange", handler);
+      window.addEventListener("popstate", handler);
+    },
+    markActive(sel, attr = "href") {
+      const here = this.path().replace(/\/$/, "") || "/";
+      document.querySelectorAll(sel).forEach((a) => {
+        const href = (a.getAttribute(attr) || "").replace(/\/$/, "") || "/";
+        const path = href.replace(/^#/, "") || "/";
+        const active = path === here || (here !== "/" && path !== "/" && here.startsWith(path + "/"));
+        a.classList.toggle("active", active);
+        if (active) a.setAttribute("aria-current", "page");
+        else a.removeAttribute("aria-current");
+      });
+    }
+  },
+  fetch(url, opts) {
+    return fetch(url, opts || undefined);
+  },
+  formData(sel) {
+    const el = typeof sel === "string" ? this.$(sel) : sel;
+    if (!el) { console.warn("SoloJS: no form for", sel); return new FormData(); }
+    return new FormData(el);
+  },
+  clipboard(text) {
+    const value = String(text ?? "");
+    if (navigator.clipboard && navigator.clipboard.writeText)
+      return navigator.clipboard.writeText(value);
+    const ta = document.createElement("textarea");
+    ta.value = value; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } finally { ta.remove(); }
+    return Promise.resolve();
+  },
+  whenVisible(sel, handler, opts) {
+    const el = this.$(sel);
+    if (!el) { console.warn("SoloJS: no element for", sel); return; }
+    if (!("IntersectionObserver" in window)) { handler(); return; }
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          handler(entry);
+          if (!(opts && opts.repeat)) io.disconnect();
+        }
+      }
+    }, { threshold: (opts && opts.threshold) || 0.15 });
+    io.observe(el);
+    return io;
   },
   after(ms, handler) {
     return setTimeout(handler, Number(ms));

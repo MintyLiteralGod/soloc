@@ -57,28 +57,39 @@ page Hello
 | `hero` | Styled header band |
 | `section` | Page section |
 | `row` + `card` | Responsive card grid |
-| `button primary` | Call-to-action |
-| `list` / `item` | Bulleted list |
-| `#id` / `.class` | IDs and classes |
+| `button primary` / `button btn` | CTA; `.button` class is **opt-in** |
+| `a href=…` | Anchor |
+| `link rel=… href=…` | Real HTML `<link>` (head asset — not an anchor) |
+| `favicon` / `og` / `canonical` | Head SEO / icons |
+| `layout shell.solohtml` + `slot` | Shared site shell |
 | `include nav.solohtml` | Splice in another SoloHTML file |
 | `css href=app.css` | `<link rel="stylesheet">` |
 | `js src=app.js` | `<script src>` at end of body |
 | `page theme=none` / `notheme` / `bare` | Skip SoloHTML’s default theme CSS |
 | `// comment` | Ignored |
 
-## Components (`include`)
+## Layouts + includes
 
 ```solohtml
-page Site
-  title My site
-  include components/nav.solohtml
+layout layouts/shell.solohtml
+  title Home
   hero
     h1 Hello
-  css href=styles.css
-  js src=app.js
 ```
 
-Paths are resolved relative to the current file. Cycles are rejected.
+```solohtml
+// layouts/shell.solohtml
+page theme=none
+  head
+    favicon href=/favicon.svg
+    og title=My Site
+  include components/nav.solohtml
+  main
+    slot
+  include components/footer.solohtml
+```
+
+Paths are relative to the current file. Cycles are rejected.
 
 ## Default theme
 
@@ -87,6 +98,8 @@ SoloHTML injects a small starter stylesheet for Studio demos. Opt out when you b
 - `page MySite theme=none` (or `notheme` / `bare`)
 - any `css` / `stylesheet` link on the page
 - SoloPage with a `.solocss` file (theme off automatically)
+
+`.button` styling is opt-in (`primary` / `secondary` / `ghost` / `btn` / `styled`) so custom SoloCSS is not fighting mystery classes.
 
 ## Why SoloHTML?
 

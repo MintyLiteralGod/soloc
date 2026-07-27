@@ -1,70 +1,121 @@
 # SoloPage
 
-**Assemble SoloHTML + SoloCSS + SoloJS into one `index.html`** — SoloGem Solo5.
+**Assemble SoloHTML + SoloCSS + SoloJS into a site** — SoloGem Solo5.
 
-Not a full web framework. A SoloPage project is just a folder; one compile stitches the three languages.
+A folder is the unit: one page, or a multi-route marketing site with layouts, shared CSS, data→pages, and Netlify-ready output.
 
-```text
-mysite/
-  page.solohtml
-  styles.solocss
-  app.solojs
-  components/     (optional includes)
-```
-
-## Tools
-
-| Tool | What |
-|------|------|
-| CLI | `src/SoloPage.Cli` → `solopage` |
-| Library | `src/SoloPage.Compiler` |
-| Hub | `src/Solo5.Hub` → **http://localhost:5080** |
-
-## Quick start
+## Single page
 
 ```bash
 dotnet run --project src/SoloPage.Cli -- new mysite
 dotnet run --project src/SoloPage.Cli -- build mysite
-# → mysite/index.html
-
-dotnet run --project src/SoloPage.Cli -- watch mysite
 ```
 
-Or build the repo sample:
+## Site mode
+
+```text
+mysite/
+  pages/           → routes (/, /deskcore/, /tips/, …)
+  layouts/shell.solohtml
+  components/
+  templates/       → JSON collection templates
+  data/*.json
+  public/          → copied into dist/ (favicons, og.jpg, fonts)
+  tokens/ + styles.solocss
+  app.solojs
+  site.json
+```
 
 ```bash
-dotnet run --project src/SoloPage.Cli -- build examples/page
+dotnet run --project src/SoloPage.Cli -- new mysite --site
+dotnet run --project src/SoloPage.Cli -- build mysite --base-url https://sologem.xyz
+# → dist/ + assets/ + _redirects + sitemap.xml + robots.txt + public/*
 ```
 
-## Solo5 Hub
+Sample: **`examples/site`**
 
-One landing page for every Studio:
+## Layouts + SEO head
+
+```solohtml
+layout layouts/shell.solohtml
+  title Home
+  head
+    meta name=description content=Hello
+    og title=Home
+    twitter card=summary
+    twitter title=Home
+    canonical href=https://example.com/
+    favicon href=/favicon.svg
+    jsonld
+      {"@type":"WebSite","name":"SoloGem"}
+  hero
+    h1 Hello
+```
+
+`link` emits HTML `<link>` (not an anchor). Use `a` for links. `.button` theme class is opt-in.
+
+## Data → pages
+
+`site.json`:
+
+```json
+{
+  "baseUrl": "https://example.com",
+  "collections": [
+    {
+      "data": "data/tips.json",
+      "template": "templates/tip.solohtml",
+      "out": "tips/{{slug}}/index.html",
+      "route": "/tips/{{slug}}"
+    }
+  ]
+}
+```
+
+Each JSON item with a `slug` becomes its own SEO URL.
+
+## SoloJS site APIs
+
+| Need | SoloJS |
+|------|--------|
+| Active nav | `solo.route.markActive("nav a")` (uses `meta solo:route`) |
+| Burger / flyout | `toggleClass "#nav" open` |
+| Scroll cue | `on scroll window` |
+| Reveal | `when visible ".card"` |
+| Clipboard | `copy "text"` / `clipboard …` |
+| Forms | `on submit "#f"` + `formData` + `fetch … method=POST body="form #f" mode=no-cors` |
+| Timers | `after` / `every` / `frame` |
+| Canvas | `canvas "#c" into gfx` |
+
+### Contact form (Google Form / Netlify)
+
+```solojs
+on submit "#contact"
+  preventDefault
+  formData "#contact" into payload
+  fetch "YOUR_FORM_RESPONSE_URL" method=POST body="form #contact" mode=no-cors
+    set "#status" text "Sent — thanks!"
+  catch
+    set "#status" text "Could not send."
+```
+
+For Netlify Forms, add `netlify=true` on the form and a success page — or POST to your function URL without `no-cors`.
+
+## Shared SoloCSS
+
+One `styles.solocss` (with `include tokens/brand.solocss`) compiles to `assets/site.css` linked from every page.
+
+## Netlify
+
+Build command:
 
 ```bash
-dotnet run --project src/Solo5.Hub
+dotnet run --project src/SoloPage.Cli -- build . --base-url https://yoursite.com
 ```
 
-Open **http://localhost:5080**
-
-## How assembling works
-
-1. Compile `page.solohtml` (supports `include`, `css`, `js`)
-2. Compile `styles.solocss` — when present, SoloHTML’s default theme is skipped
-3. Compile `app.solojs`
-4. Inline CSS + JS into a single `index.html` (default)
-5. If SoloJS uses React (`component` / `mount`), inject React 18 UMD scripts
-
-## React example
-
-```bash
-dotnet run --project src/SoloPage.Cli -- build examples/page-react
-```
-
-Open `examples/page-react/index.html` in a browser.
+Publish directory: `dist`  
+`_redirects` maps `/deskcore` → `/deskcore/` for clean URLs.
 
 ## Related
 
-- [Solo5 overview](../solo5/README.md)
-- [SoloHTML includes](../solohtml/README.md)
-- [SoloCSS](../solocss/README.md)
-- [SoloJS](../solojs/README.md)
+- [Solo5](../solo5/README.md) · [SoloHTML](../solohtml/README.md) · [SoloJS](../solojs/README.md) · [SoloCSS](../solocss/README.md)

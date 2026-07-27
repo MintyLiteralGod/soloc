@@ -92,6 +92,9 @@ public sealed class HtmlEmitter
             return;
         }
 
+        if (node.Tag is "slot" or "content" or "head" or "layout")
+            return;
+
         if (node.Tag is "style")
         {
             sb.Append(pad).AppendLine("<style>");
@@ -152,37 +155,35 @@ public sealed class HtmlEmitter
         sb.Append(pad).Append("</").Append(mapped.Tag).AppendLine(">");
     }
 
+    private static readonly HashSet<string> HeadOnlyTags = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "title", "meta", "style", "css", "stylesheet", "link", "head",
+        "favicon", "icon", "apple-touch-icon", "canonical", "og", "twitter", "jsonld", "ld+json",
+    };
+
     private void EmitPage(StringBuilder sb, SoloHtmlNode page, string? pageTitle)
     {
         var title = page.Text ?? pageTitle ?? "SoloHTML";
-        var titleNode = page.Children.FirstOrDefault(c => c.Tag == "title");
+        var titleNode = page.Children.FirstOrDefault(c => c.Tag == "title")
+            ?? page.Children.Where(c => c.Tag == "head").SelectMany(c => c.Children).FirstOrDefault(c => c.Tag == "title");
         if (titleNode?.Text is { } t)
             title = t;
 
+        var lang = page.Attributes.TryGetValue("lang", out var langAttr) ? langAttr : "en";
+
         sb.AppendLine("<!DOCTYPE html>");
-        sb.AppendLine("<html lang=\"en\">");
+        sb.AppendLine($"<html lang=\"{WebUtility.HtmlEncode(lang)}\">");
         sb.AppendLine("<head>");
         sb.AppendLine("  <meta charset=\"utf-8\" />");
         sb.AppendLine("  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />");
         sb.AppendLine($"  <title>{WebUtility.HtmlEncode(title)}</title>");
 
-        foreach (var meta in page.Children.Where(c => c.Tag == "meta"))
-        {
-            sb.Append("  <meta");
-            var attrs = new Dictionary<string, string>(meta.Attributes, StringComparer.OrdinalIgnoreCase);
-            if (!string.IsNullOrWhiteSpace(meta.Text) && !attrs.ContainsKey("content"))
-                attrs["content"] = meta.Text;
-            if (!attrs.ContainsKey("name") && attrs.Count > 0)
-            {
-                // allow: meta description=...
-            }
-
-            WriteAttrs(sb, attrs);
-            sb.AppendLine(" />");
-        }
+        foreach (var node in EnumerateHeadNodes(page))
+            EmitHeadNode(sb, node, "  ");
 
         var useTheme = ShouldIncludeDefaultTheme(new[] { page });
-        var customStyle = page.Children.FirstOrDefault(c => c.Tag == "style");
+        var customStyle = page.Children.FirstOrDefault(c => c.Tag == "style")
+            ?? page.Children.Where(c => c.Tag == "head").SelectMany(c => c.Children).FirstOrDefault(c => c.Tag == "style");
         if (useTheme || customStyle is not null)
         {
             sb.AppendLine("  <style>");
@@ -199,7 +200,9 @@ public sealed class HtmlEmitter
             sb.AppendLine("  </style>");
         }
 
-        foreach (var css in page.Children.Where(c => c.Tag is "css" or "stylesheet"))
+        foreach (var css in page.Children.Where(c => c.Tag is "css" or "stylesheet")
+                     .Concat(page.Children.Where(c => c.Tag == "head").SelectMany(c => c.Children)
+                         .Where(c => c.Tag is "css" or "stylesheet")))
             EmitStylesheetLink(sb, css, "  ");
 
         sb.AppendLine("</head>");
@@ -207,10 +210,10 @@ public sealed class HtmlEmitter
 
         foreach (var child in page.Children)
         {
-            if (child.Tag is "title" or "meta" or "style" or "css" or "stylesheet")
+            if (HeadOnlyTags.Contains(child.Tag))
                 continue;
             if ((child.Tag is "js" or "script") && HasSrc(child))
-                continue; // emit scripts at end of body
+                continue;
             EmitNode(sb, child, 1, title);
         }
 
@@ -219,6 +222,177 @@ public sealed class HtmlEmitter
 
         sb.AppendLine("</body>");
         sb.AppendLine("</html>");
+    }
+
+    private static IEnumerable<SoloHtmlNode> EnumerateHeadNodes(SoloHtmlNode page)
+    {
+        foreach (var child in page.Children)
+        {
+            if (child.Tag == "head")
+            {
+                foreach (var nested in child.Children)
+                    yield return nested;
+                continue;
+            }
+
+            if (child.Tag is "meta" or "link" or "favicon" or "icon" or "apple-touch-icon"
+                or "canonical" or "og" or "twitter" or "jsonld" or "ld+json")
+                yield return child;
+        }
+    }
+
+    private static void EmitHeadNode(StringBuilder sb, SoloHtmlNode node, string pad)
+    {
+        switch (node.Tag)
+        {
+            case "title":
+            case "style":
+            case "css":
+            case "stylesheet":
+                return; // handled elsewhere
+
+            case "meta":
+            {
+                sb.Append(pad).Append("<meta");
+                var attrs = new Dictionary<string, string>(node.Attributes, StringComparer.OrdinalIgnoreCase);
+                if (!string.IsNullOrWhiteSpace(node.Text) && !attrs.ContainsKey("content"))
+                    attrs["content"] = node.Text;
+                WriteAttrs(sb, attrs);
+                sb.AppendLine(" />");
+                return;
+            }
+
+            case "favicon":
+            case "icon":
+            {
+                var href = AttrOrText(node, "href", "src");
+                var type = node.Attributes.TryGetValue("type", out var ty) ? ty : null;
+                sb.Append(pad).Append("<link rel=\"icon\"");
+                if (!string.IsNullOrWhiteSpace(type))
+                    sb.Append(" type=\"").Append(WebUtility.HtmlEncode(type)).Append('"');
+                sb.Append(" href=\"").Append(WebUtility.HtmlEncode(href ?? "/favicon.ico")).AppendLine("\" />");
+                return;
+            }
+
+            case "apple-touch-icon":
+            {
+                var href = AttrOrText(node, "href", "src") ?? "/apple-touch-icon.png";
+                sb.Append(pad).Append("<link rel=\"apple-touch-icon\" href=\"")
+                    .Append(WebUtility.HtmlEncode(href)).AppendLine("\" />");
+                return;
+            }
+
+            case "canonical":
+            {
+                var href = AttrOrText(node, "href", "src") ?? node.Text;
+                if (string.IsNullOrWhiteSpace(href))
+                    throw new SoloHtmlException($"line {node.Line}: canonical needs href");
+                sb.Append(pad).Append("<link rel=\"canonical\" href=\"")
+                    .Append(WebUtility.HtmlEncode(href.Trim())).AppendLine("\" />");
+                return;
+            }
+
+            case "og":
+            {
+                // og title=… / og property=og:title content=…
+                var attrs = new Dictionary<string, string>(node.Attributes, StringComparer.OrdinalIgnoreCase);
+                if (!attrs.ContainsKey("property"))
+                {
+                    // first non-content key becomes og:* 
+                    var propKey = attrs.Keys.FirstOrDefault(k =>
+                        !k.Equals("content", StringComparison.OrdinalIgnoreCase));
+                    if (propKey is not null)
+                    {
+                        var val = attrs[propKey];
+                        attrs.Remove(propKey);
+                        attrs["property"] = propKey.StartsWith("og:", StringComparison.OrdinalIgnoreCase)
+                            ? propKey
+                            : "og:" + propKey;
+                        if (!attrs.ContainsKey("content"))
+                            attrs["content"] = val;
+                    }
+                }
+                if (!string.IsNullOrWhiteSpace(node.Text) && !attrs.ContainsKey("content"))
+                    attrs["content"] = node.Text;
+                sb.Append(pad).Append("<meta");
+                WriteAttrs(sb, attrs);
+                sb.AppendLine(" />");
+                return;
+            }
+
+            case "twitter":
+            {
+                var attrs = new Dictionary<string, string>(node.Attributes, StringComparer.OrdinalIgnoreCase);
+                if (!attrs.ContainsKey("name"))
+                {
+                    var propKey = attrs.Keys.FirstOrDefault(k =>
+                        !k.Equals("content", StringComparison.OrdinalIgnoreCase));
+                    if (propKey is not null)
+                    {
+                        var val = attrs[propKey];
+                        attrs.Remove(propKey);
+                        attrs["name"] = propKey.StartsWith("twitter:", StringComparison.OrdinalIgnoreCase)
+                            ? propKey
+                            : "twitter:" + propKey;
+                        if (!attrs.ContainsKey("content"))
+                            attrs["content"] = val;
+                    }
+                }
+                if (!string.IsNullOrWhiteSpace(node.Text) && !attrs.ContainsKey("content"))
+                    attrs["content"] = node.Text;
+                sb.Append(pad).Append("<meta");
+                WriteAttrs(sb, attrs);
+                sb.AppendLine(" />");
+                return;
+            }
+
+            case "jsonld":
+            case "ld+json":
+            {
+                var json = node.Text ?? string.Join("\n", node.Children.Select(c =>
+                    string.IsNullOrWhiteSpace(c.Text) ? c.Tag : $"{c.Tag} {c.Text}"));
+                sb.Append(pad).AppendLine("<script type=\"application/ld+json\">");
+                sb.Append(pad).Append("  ").AppendLine(json.Trim());
+                sb.Append(pad).AppendLine("</script>");
+                return;
+            }
+
+            case "link":
+            {
+                // Real HTML <link> — never an anchor.
+                var attrs = new Dictionary<string, string>(node.Attributes, StringComparer.OrdinalIgnoreCase);
+                if (!attrs.ContainsKey("href"))
+                {
+                    var href = AttrOrText(node, "href", "src");
+                    if (!string.IsNullOrWhiteSpace(href))
+                        attrs["href"] = href!;
+                }
+                sb.Append(pad).Append("<link");
+                WriteAttrs(sb, attrs);
+                sb.AppendLine(" />");
+                return;
+            }
+
+            default:
+                EmitNodeStatic(sb, node, pad);
+                return;
+        }
+    }
+
+    private static void EmitNodeStatic(StringBuilder sb, SoloHtmlNode node, string pad)
+    {
+        // Minimal fallback for unexpected head children
+        sb.Append(pad).Append("<!-- head: ").Append(node.Tag).AppendLine(" -->");
+    }
+
+    private static string? AttrOrText(SoloHtmlNode node, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (node.Attributes.TryGetValue(key, out var v) && !string.IsNullOrWhiteSpace(v))
+                return v;
+        }
+        return string.IsNullOrWhiteSpace(node.Text) ? null : node.Text.Trim();
     }
 
     private static bool HasSrc(SoloHtmlNode node) =>
@@ -272,7 +446,9 @@ public sealed class HtmlEmitter
                 return new MappedTag("li", attrs);
             case "button":
             {
-                AppendClass(attrs, "button");
+                // .button theme class is opt-in: primary/secondary/ghost/btn/styled
+                if (WantsButtonThemeClass(attrs))
+                    AppendClass(attrs, "button");
                 if (attrs.ContainsKey("href"))
                     return new MappedTag("a", attrs);
                 return new MappedTag("button", attrs);
@@ -299,7 +475,12 @@ public sealed class HtmlEmitter
                 return new MappedTag("script", attrs);
             }
             case "link":
+                // HTML <link> for head assets — not an anchor. EmitPage handles page-level links.
+                if (!attrs.ContainsKey("href") && !string.IsNullOrWhiteSpace(node.Text))
+                    attrs["href"] = node.Text!;
+                return new MappedTag("link", attrs);
             case "a":
+            case "anchor":
                 return new MappedTag("a", attrs);
             case "image":
             case "img":
@@ -312,6 +493,12 @@ public sealed class HtmlEmitter
                 return new MappedTag("footer", attrs);
             case "nav":
                 return new MappedTag("nav", attrs);
+            case "form":
+            case "input":
+            case "label":
+            case "textarea":
+            case "select":
+            case "option":
             case "h1":
             case "h2":
             case "h3":
@@ -328,11 +515,22 @@ public sealed class HtmlEmitter
             case "em":
             case "code":
             case "pre":
+            case "canvas":
                 return new MappedTag(node.Tag, attrs);
             default:
                 // Unknown tags pass through as custom elements / plain tags.
                 return new MappedTag(node.Tag, attrs);
         }
+    }
+
+    private static bool WantsButtonThemeClass(Dictionary<string, string> attrs)
+    {
+        if (attrs.ContainsKey("btn") || attrs.ContainsKey("styled"))
+            return true;
+        if (!attrs.TryGetValue("class", out var cls) || string.IsNullOrWhiteSpace(cls))
+            return false;
+        return cls.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Any(c => c is "primary" or "secondary" or "ghost" or "btn" or "styled" or "button");
     }
 
     private static void AppendClass(Dictionary<string, string> attrs, string className)

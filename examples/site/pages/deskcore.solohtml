@@ -1,0 +1,9 @@
+layout ../layouts/shell.solohtml
+  title DeskCore
+  section
+    h1 DeskCore
+    p Second route — same shell, different body.
+    form action=mailto:hello@example.com method=post
+      label Email
+      input type=email name=email required=true
+      button.btn.primary type=submit Send

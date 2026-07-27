@@ -1,0 +1,13 @@
+layout ../layouts/shell.solohtml
+  title {{title}}
+  head
+    meta name=description content={{description}}
+    og title={{title}}
+    og description={{description}}
+    twitter card=summary
+    twitter title={{title}}
+    canonical href=https://example.com/tips/{{slug}}
+  section.tip
+    h1 {{title}}
+    p {{body}}
+    a href=/tips Back to tips

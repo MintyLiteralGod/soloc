@@ -158,7 +158,7 @@ public sealed class HtmlEmitter
     private static readonly HashSet<string> HeadOnlyTags = new(StringComparer.OrdinalIgnoreCase)
     {
         "title", "meta", "style", "css", "stylesheet", "link", "head",
-        "favicon", "icon", "apple-touch-icon", "canonical", "og",
+        "favicon", "icon", "apple-touch-icon", "canonical", "og", "twitter", "jsonld", "ld+json",
     };
 
     private void EmitPage(StringBuilder sb, SoloHtmlNode page, string? pageTitle)
@@ -236,7 +236,7 @@ public sealed class HtmlEmitter
             }
 
             if (child.Tag is "meta" or "link" or "favicon" or "icon" or "apple-touch-icon"
-                or "canonical" or "og")
+                or "canonical" or "og" or "twitter" or "jsonld" or "ld+json")
                 yield return child;
         }
     }
@@ -317,6 +317,43 @@ public sealed class HtmlEmitter
                 sb.Append(pad).Append("<meta");
                 WriteAttrs(sb, attrs);
                 sb.AppendLine(" />");
+                return;
+            }
+
+            case "twitter":
+            {
+                var attrs = new Dictionary<string, string>(node.Attributes, StringComparer.OrdinalIgnoreCase);
+                if (!attrs.ContainsKey("name"))
+                {
+                    var propKey = attrs.Keys.FirstOrDefault(k =>
+                        !k.Equals("content", StringComparison.OrdinalIgnoreCase));
+                    if (propKey is not null)
+                    {
+                        var val = attrs[propKey];
+                        attrs.Remove(propKey);
+                        attrs["name"] = propKey.StartsWith("twitter:", StringComparison.OrdinalIgnoreCase)
+                            ? propKey
+                            : "twitter:" + propKey;
+                        if (!attrs.ContainsKey("content"))
+                            attrs["content"] = val;
+                    }
+                }
+                if (!string.IsNullOrWhiteSpace(node.Text) && !attrs.ContainsKey("content"))
+                    attrs["content"] = node.Text;
+                sb.Append(pad).Append("<meta");
+                WriteAttrs(sb, attrs);
+                sb.AppendLine(" />");
+                return;
+            }
+
+            case "jsonld":
+            case "ld+json":
+            {
+                var json = node.Text ?? string.Join("\n", node.Children.Select(c =>
+                    string.IsNullOrWhiteSpace(c.Text) ? c.Tag : $"{c.Tag} {c.Text}"));
+                sb.Append(pad).AppendLine("<script type=\"application/ld+json\">");
+                sb.Append(pad).Append("  ").AppendLine(json.Trim());
+                sb.Append(pad).AppendLine("</script>");
                 return;
             }
 

@@ -1,0 +1,16 @@
+layout ../layouts/shell.solohtml
+  title Contact
+  head
+    meta name=description content=Say hello
+  section
+    h1 Contact
+    p Demo form — swap the fetch URL for your Google Form formResponse or Netlify endpoint.
+    form #contact
+      label Name
+      input type=text name=name required=true
+      label Email
+      input type=email name=email required=true
+      label Message
+      textarea name=message
+      button.btn.primary type=submit Send
+    p #form-status.hidden

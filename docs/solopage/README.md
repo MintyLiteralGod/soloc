@@ -2,108 +2,120 @@
 
 **Assemble SoloHTML + SoloCSS + SoloJS into a site** — SoloGem Solo5.
 
-Not a full web framework. A folder is the unit: one page, or many routes with a shared shell.
+A folder is the unit: one page, or a multi-route marketing site with layouts, shared CSS, data→pages, and Netlify-ready output.
 
 ## Single page
-
-```text
-mysite/
-  page.solohtml
-  styles.solocss
-  app.solojs
-  components/
-```
 
 ```bash
 dotnet run --project src/SoloPage.Cli -- new mysite
 dotnet run --project src/SoloPage.Cli -- build mysite
-# → mysite/index.html (CSS/JS inlined)
 ```
 
-## Site mode (multi-page)
+## Site mode
 
 ```text
 mysite/
-  pages/
-    index.solohtml       → dist/index.html           (/)
-    deskcore.solohtml    → dist/deskcore/index.html  (/deskcore/)
+  pages/           → routes (/, /deskcore/, /tips/, …)
   layouts/shell.solohtml
   components/
-  tokens/brand.solocss
-  styles.solocss
+  templates/       → JSON collection templates
+  data/*.json
+  public/          → copied into dist/ (favicons, og.jpg, fonts)
+  tokens/ + styles.solocss
   app.solojs
+  site.json
 ```
 
 ```bash
 dotnet run --project src/SoloPage.Cli -- new mysite --site
-dotnet run --project src/SoloPage.Cli -- build mysite
-# → dist/ + assets/site.css + assets/site.js (shared, cacheable)
+dotnet run --project src/SoloPage.Cli -- build mysite --base-url https://sologem.xyz
+# → dist/ + assets/ + _redirects + sitemap.xml + robots.txt + public/*
 ```
 
-Sample: `examples/site`
+Sample: **`examples/site`**
 
-## Layouts + includes
+## Layouts + SEO head
 
 ```solohtml
 layout layouts/shell.solohtml
   title Home
+  head
+    meta name=description content=Hello
+    og title=Home
+    twitter card=summary
+    twitter title=Home
+    canonical href=https://example.com/
+    favicon href=/favicon.svg
+    jsonld
+      {"@type":"WebSite","name":"SoloGem"}
   hero
     h1 Hello
 ```
 
-Shell owns nav/footer/head once; pages fill `slot`:
+`link` emits HTML `<link>` (not an anchor). Use `a` for links. `.button` theme class is opt-in.
 
-```solohtml
-page theme=none
-  head
-    favicon href=/favicon.svg
-    og title=My Site
-  include components/nav.solohtml
-  main
-    slot
-  include components/footer.solohtml
+## Data → pages
+
+`site.json`:
+
+```json
+{
+  "baseUrl": "https://example.com",
+  "collections": [
+    {
+      "data": "data/tips.json",
+      "template": "templates/tip.solohtml",
+      "out": "tips/{{slug}}/index.html",
+      "route": "/tips/{{slug}}"
+    }
+  ]
+}
 ```
 
-## Head control
+Each JSON item with a `slug` becomes its own SEO URL.
 
-| Tag | Emits |
-|-----|--------|
-| `favicon href=…` | `<link rel="icon">` |
-| `apple-touch-icon` | apple touch icon |
-| `canonical href=…` | canonical link |
-| `og title=…` | `<meta property="og:title">` |
-| `link rel=… href=…` | real HTML `<link>` (not an anchor) |
-| `meta name=… content=…` | meta |
-| `a href=…` | anchors |
+## SoloJS site APIs
 
-## Theme
+| Need | SoloJS |
+|------|--------|
+| Active nav | `solo.route.markActive("nav a")` (uses `meta solo:route`) |
+| Burger / flyout | `toggleClass "#nav" open` |
+| Scroll cue | `on scroll window` |
+| Reveal | `when visible ".card"` |
+| Clipboard | `copy "text"` / `clipboard …` |
+| Forms | `on submit "#f"` + `formData` + `fetch … method=POST body="form #f" mode=no-cors` |
+| Timers | `after` / `every` / `frame` |
+| Canvas | `canvas "#c" into gfx` |
 
-When a `.solocss` file is present, SoloHTML’s default theme stays **off**.  
-`.button` theme class is **opt-in** (`primary` / `secondary` / `ghost` / `btn` / `styled`).
+### Contact form (Google Form / Netlify)
 
-## SoloJS site helpers
-
-- `toggleClass` / `addClass` / `removeClass`
-- `set "#x" style.display flex`, `attr aria-expanded true`, `dataset…`
-- `preventDefault` / `stopPropagation` inside `on`
-- `frame` → `requestAnimationFrame`
-- `canvas "#c" into gfx`
-- `solo.route.markActive("nav a")` / `solo.route.go("/path")`
-
-## Forms & external flows
-
-Use real form tags; wire checkout/mailto outside SoloPage:
-
-```solohtml
-form action=mailto:hello@example.com method=post
-  label Email
-  input type=email name=email required=true
-  button.btn.primary type=submit Send
+```solojs
+on submit "#contact"
+  preventDefault
+  formData "#contact" into payload
+  fetch "YOUR_FORM_RESPONSE_URL" method=POST body="form #contact" mode=no-cors
+    set "#status" text "Sent — thanks!"
+  catch
+    set "#status" text "Could not send."
 ```
 
-Polar/Stripe/etc.: point `action` or a SoloJS `on click` at your checkout URL — SoloPage does not own payments.
+For Netlify Forms, add `netlify=true` on the form and a success page — or POST to your function URL without `no-cors`.
+
+## Shared SoloCSS
+
+One `styles.solocss` (with `include tokens/brand.solocss`) compiles to `assets/site.css` linked from every page.
+
+## Netlify
+
+Build command:
+
+```bash
+dotnet run --project src/SoloPage.Cli -- build . --base-url https://yoursite.com
+```
+
+Publish directory: `dist`  
+`_redirects` maps `/deskcore` → `/deskcore/` for clean URLs.
 
 ## Related
 
-- [Solo5 overview](../solo5/README.md)
-- [SoloHTML](../solohtml/README.md) · [SoloCSS](../solocss/README.md) · [SoloJS](../solojs/README.md)
+- [Solo5](../solo5/README.md) · [SoloHTML](../solohtml/README.md) · [SoloJS](../solojs/README.md) · [SoloCSS](../solocss/README.md)

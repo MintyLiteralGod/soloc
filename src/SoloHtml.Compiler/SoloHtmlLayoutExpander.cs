@@ -8,7 +8,7 @@ public static class SoloHtmlLayoutExpander
     private static readonly HashSet<string> HeadishTags = new(StringComparer.OrdinalIgnoreCase)
     {
         "title", "meta", "head", "style", "css", "stylesheet", "link",
-        "favicon", "icon", "apple-touch-icon", "canonical", "og",
+        "favicon", "icon", "apple-touch-icon", "canonical", "og", "twitter", "jsonld", "ld+json",
     };
 
     public static SoloHtmlDocument Expand(SoloHtmlDocument document, string? basePath)

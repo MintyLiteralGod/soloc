@@ -85,6 +85,7 @@ public sealed class SoloJsParser
                 case SoloJsAfter after: stack.Push((indent, after.Body, false)); break;
                 case SoloJsEvery every: stack.Push((indent, every.Body, false)); break;
                 case SoloJsFrame frame: stack.Push((indent, frame.Body, false)); break;
+                case SoloJsWhenVisible vis: stack.Push((indent, vis.Body, false)); break;
                 case SoloJsComponent comp:
                     program.UsesReact = true;
                     stack.Push((indent, comp.Body, false));
@@ -223,6 +224,28 @@ public sealed class SoloJsParser
 
         if (text.StartsWith("canvas ", StringComparison.OrdinalIgnoreCase))
             return ParseCanvas(text, line);
+
+        if (text.StartsWith("when visible ", StringComparison.OrdinalIgnoreCase) ||
+            text.StartsWith("whenVisible ", StringComparison.OrdinalIgnoreCase))
+        {
+            var sel = text.StartsWith("when visible ", StringComparison.OrdinalIgnoreCase)
+                ? Unquote(StripColon(text["when visible ".Length..].Trim()))
+                : Unquote(StripColon(text["whenVisible ".Length..].Trim()));
+            return new SoloJsWhenVisible { Selector = sel, Line = line };
+        }
+
+        if (text.StartsWith("clipboard ", StringComparison.OrdinalIgnoreCase) ||
+            text.StartsWith("copy ", StringComparison.OrdinalIgnoreCase))
+        {
+            var rest = text.StartsWith("copy ", StringComparison.OrdinalIgnoreCase)
+                ? text[5..].Trim()
+                : text["clipboard ".Length..].Trim();
+            return new SoloJsClipboard { Value = rest, Line = line };
+        }
+
+        if (text.StartsWith("formData ", StringComparison.OrdinalIgnoreCase) ||
+            text.StartsWith("formdata ", StringComparison.OrdinalIgnoreCase))
+            return ParseFormData(text, line);
 
         if (text.StartsWith("print", StringComparison.OrdinalIgnoreCase))
         {
@@ -468,14 +491,124 @@ public sealed class SoloJsParser
         string url;
         string? into = null;
         var intoIdx = rest.IndexOf(" into ", StringComparison.OrdinalIgnoreCase);
+        string optionsPart;
         if (intoIdx >= 0)
         {
-            url = Unquote(rest[..intoIdx].Trim());
+            // URL may include options before into: fetch "u" method=POST into x
+            var before = rest[..intoIdx].Trim();
             into = rest[(intoIdx + 6)..].Trim();
+            var parts = SplitFetchHead(before);
+            url = parts.Url;
+            optionsPart = parts.Options;
         }
-        else url = Unquote(rest);
+        else
+        {
+            var parts = SplitFetchHead(rest);
+            url = parts.Url;
+            optionsPart = parts.Options;
+        }
 
-        return new SoloJsFetch { Url = url, Into = into, Line = line };
+        var fetch = new SoloJsFetch { Url = url, Into = into, Line = line };
+        ApplyFetchOptions(fetch, optionsPart, line);
+        return fetch;
+    }
+
+    private static (string Url, string Options) SplitFetchHead(string text)
+    {
+        text = text.Trim();
+        if (text.StartsWith('"') || text.StartsWith('\''))
+        {
+            var (url, after) = ReadQuoted(text, 1);
+            return (url, after.Trim());
+        }
+
+        var sp = text.IndexOf(' ');
+        if (sp < 0)
+            return (Unquote(text), "");
+        return (Unquote(text[..sp]), text[(sp + 1)..].Trim());
+    }
+
+    private static void ApplyFetchOptions(SoloJsFetch fetch, string options, int line)
+    {
+        if (string.IsNullOrWhiteSpace(options))
+            return;
+
+        foreach (var token in TokenizeOptions(options))
+        {
+            var eq = token.IndexOf('=');
+            if (eq <= 0)
+            {
+                if (token.Equals("json", StringComparison.OrdinalIgnoreCase))
+                    fetch.AsJson = true;
+                continue;
+            }
+
+            var key = token[..eq].Trim();
+            var value = Unquote(token[(eq + 1)..].Trim());
+            switch (key.ToLowerInvariant())
+            {
+                case "method": fetch.Method = value; break;
+                case "body": fetch.Body = value; break;
+                case "mode": fetch.Mode = value; break;
+                case "headers": fetch.Headers = value; break;
+                case "as" when value.Equals("json", StringComparison.OrdinalIgnoreCase):
+                    fetch.AsJson = true;
+                    break;
+                default:
+                    throw new SoloJsException($"line {line}: unknown fetch option `{key}`");
+            }
+        }
+    }
+
+    private static List<string> TokenizeOptions(string options)
+    {
+        var list = new List<string>();
+        var i = 0;
+        while (i < options.Length)
+        {
+            while (i < options.Length && char.IsWhiteSpace(options[i])) i++;
+            if (i >= options.Length) break;
+            var start = i;
+            if (options[i] is '"' or '\'')
+            {
+                var q = options[i++];
+                while (i < options.Length && options[i] != q) i++;
+                if (i < options.Length) i++;
+                // this was a bare quoted token — skip
+                continue;
+            }
+
+            while (i < options.Length && !char.IsWhiteSpace(options[i]))
+            {
+                if (options[i] == '=' && i + 1 < options.Length && options[i + 1] is '"' or '\'')
+                {
+                    i++; // =
+                    var q = options[i++];
+                    while (i < options.Length && options[i] != q)
+                    {
+                        if (options[i] == '\\' && i + 1 < options.Length) i++;
+                        i++;
+                    }
+                    if (i < options.Length) i++;
+                    break;
+                }
+                i++;
+            }
+            list.Add(options[start..i]);
+        }
+        return list;
+    }
+
+    private static SoloJsFormData ParseFormData(string text, int line)
+    {
+        // formData "#form" into payload
+        var rest = StripColon(text[text.IndexOf(' ')..].Trim());
+        var intoIdx = rest.IndexOf(" into ", StringComparison.OrdinalIgnoreCase);
+        if (intoIdx < 0)
+            throw new SoloJsException($"line {line}: use `formData \"#form\" into payload`");
+        var selector = Unquote(rest[..intoIdx].Trim());
+        var into = rest[(intoIdx + 6)..].Trim();
+        return new SoloJsFormData { Selector = selector, Into = into, Line = line };
     }
 
     private static SoloJsAfter ParseAfter(string text, int line)
@@ -512,9 +645,10 @@ public sealed class SoloJsParser
         {
             var parts = SplitParts(rest);
             if (parts.Length < 2)
-                throw new SoloJsException($"line {line}: use `on click \"#btn\"`");
+                throw new SoloJsException($"line {line}: use `on click \"#btn\"` or `on scroll window`");
 
-            if (parts[1].StartsWith('"') || parts[1].StartsWith('\'') || parts[1].StartsWith('#') || parts[1].StartsWith('.'))
+            if (parts[1].StartsWith('"') || parts[1].StartsWith('\'') || parts[1].StartsWith('#') || parts[1].StartsWith('.')
+                || parts[1] is "window" or "document" or "body")
             {
                 eventName = parts[0];
                 selector = Unquote(parts[1]);

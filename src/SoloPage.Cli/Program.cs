@@ -26,10 +26,12 @@ static int Build(string[] args, bool watch)
 {
     string? dir = null;
     string? outPath = null;
+    string? baseUrl = null;
     var forceInline = false;
     for (var i = 1; i < args.Length; i++)
     {
         if (args[i] is "--out" or "-o" && i + 1 < args.Length) outPath = args[++i];
+        else if (args[i] is "--base-url" && i + 1 < args.Length) baseUrl = args[++i];
         else if (args[i] is "--inline") forceInline = true;
         else if (!args[i].StartsWith('-')) dir = args[i];
     }
@@ -38,9 +40,9 @@ static int Build(string[] args, bool watch)
     var projectDir = Path.GetFullPath(dir);
 
     if (!watch)
-        return BuildOnce(projectDir, outPath, forceInline);
+        return BuildOnce(projectDir, outPath, forceInline, baseUrl);
 
-    Console.WriteLine($"Watching {projectDir} — rebuild on .solohtml / .solocss / .solojs save");
+    Console.WriteLine($"Watching {projectDir} — rebuild on Solo sources / data / public");
     Console.WriteLine("Press Ctrl+C to stop.");
 
     using var cts = new CancellationTokenSource();
@@ -50,7 +52,7 @@ static int Build(string[] args, bool watch)
         cts.Cancel();
     };
 
-    BuildOnce(projectDir, outPath, forceInline);
+    BuildOnce(projectDir, outPath, forceInline, baseUrl);
 
     using var watcher = new FileSystemWatcher(projectDir)
     {
@@ -62,7 +64,7 @@ static int Build(string[] args, bool watch)
     var pending = false;
     void OnChange(object _, FileSystemEventArgs e)
     {
-        if (!IsSoloSource(e.FullPath))
+        if (!IsWatchedSource(e.FullPath))
             return;
         pending = true;
     }
@@ -82,7 +84,7 @@ static int Build(string[] args, bool watch)
                 Thread.Sleep(80);
                 if (pending)
                     continue;
-                BuildOnce(projectDir, outPath, forceInline);
+                BuildOnce(projectDir, outPath, forceInline, baseUrl);
             }
 
             Thread.Sleep(100);
@@ -96,9 +98,13 @@ static int Build(string[] args, bool watch)
     return 0;
 }
 
-static int BuildOnce(string projectDir, string? outPath, bool forceInline)
+static int BuildOnce(string projectDir, string? outPath, bool forceInline, string? baseUrl)
 {
-    var result = SoloPageCompiler.Build(projectDir, new SoloPageOptions { ForceInline = forceInline });
+    var result = SoloPageCompiler.Build(projectDir, new SoloPageOptions
+    {
+        ForceInline = forceInline,
+        BaseUrl = baseUrl,
+    });
     if (!result.Ok)
     {
         foreach (var e in result.Errors)
@@ -117,10 +123,23 @@ static int BuildOnce(string projectDir, string? outPath, bool forceInline)
         Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Wrote {dest}");
     }
 
+    var publicDir = Path.Combine(projectDir, "public");
+    if (Directory.Exists(publicDir))
+    {
+        foreach (var src in Directory.EnumerateFiles(publicDir, "*", SearchOption.AllDirectories))
+        {
+            var rel = Path.GetRelativePath(publicDir, src);
+            var dest = Path.Combine(outDir, rel);
+            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+            File.Copy(src, dest, overwrite: true);
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Copied public/{rel.Replace('\\', '/')}");
+        }
+    }
+
     if (result.HtmlPath is not null) Console.WriteLine($"  html: {result.HtmlPath}");
     if (result.CssPath is not null) Console.WriteLine($"  css:  {result.CssPath}");
     if (result.JsPath is not null) Console.WriteLine($"  js:   {result.JsPath}");
-    if (result.IsSite) Console.WriteLine($"  site: {files.Count(f => f.RelativePath.EndsWith(".html"))} routes");
+    if (result.IsSite) Console.WriteLine($"  site: {files.Count(f => f.RelativePath.EndsWith(".html", StringComparison.OrdinalIgnoreCase))} routes");
     return 0;
 }
 
@@ -140,12 +159,17 @@ static string ResolveOutDir(string projectDir, string? outPath, bool multi)
     return Path.GetDirectoryName(full) ?? projectDir;
 }
 
-static bool IsSoloSource(string path)
+static bool IsWatchedSource(string path)
 {
+    var name = Path.GetFileName(path);
+    if (name is "site.json" or "site.solo5.json" or "solopage.json")
+        return true;
     var ext = Path.GetExtension(path);
     return ext.Equals(".solohtml", StringComparison.OrdinalIgnoreCase)
         || ext.Equals(".solocss", StringComparison.OrdinalIgnoreCase)
-        || ext.Equals(".solojs", StringComparison.OrdinalIgnoreCase);
+        || ext.Equals(".solojs", StringComparison.OrdinalIgnoreCase)
+        || ext.Equals(".json", StringComparison.OrdinalIgnoreCase)
+        || path.Contains($"{Path.DirectorySeparatorChar}public{Path.DirectorySeparatorChar}");
 }
 
 static int NewProject(string[] args)

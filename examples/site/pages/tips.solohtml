@@ -1,0 +1,12 @@
+layout ../layouts/shell.solohtml
+  title Tips
+  head
+    meta name=description content=Tips from the Solo5 site toolchain
+  section
+    h1 Tips
+    p Generated from data/tips.json at build time.
+    list
+      item
+        a href=/tips/ship-static Ship static, stay fast
+      item
+        a href=/tips/forms-without-drama Forms without drama

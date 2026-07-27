@@ -27,3 +27,17 @@ nav a.active
   radius 0.55rem
   no-underline
   bold
+.hidden
+  display none
+
+.tip.revealed
+  opacity 1
+
+#form-status.ok
+  color green
+
+#form-status.error
+  color #b00020
+
+nav.open
+  flex-wrap wrap

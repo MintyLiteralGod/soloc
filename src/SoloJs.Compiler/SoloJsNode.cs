@@ -106,8 +106,30 @@ public sealed class SoloJsFetch : SoloJsNode
 {
     public required string Url { get; init; }
     public string? Into { get; init; }
+    public string? Method { get; set; }
+    public string? Body { get; set; }
+    public string? Mode { get; set; }
+    public string? Headers { get; set; }
+    public bool AsJson { get; set; }
     public List<SoloJsNode> ThenBody { get; } = [];
     public List<SoloJsNode> CatchBody { get; } = [];
+}
+
+public sealed class SoloJsWhenVisible : SoloJsNode
+{
+    public required string Selector { get; init; }
+    public List<SoloJsNode> Body { get; } = [];
+}
+
+public sealed class SoloJsClipboard : SoloJsNode
+{
+    public required string Value { get; init; } // expression or string
+}
+
+public sealed class SoloJsFormData : SoloJsNode
+{
+    public required string Selector { get; init; }
+    public required string Into { get; init; }
 }
 
 public sealed class SoloJsAfter : SoloJsNode

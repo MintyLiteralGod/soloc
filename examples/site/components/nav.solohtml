@@ -1,4 +1,6 @@
 nav #site-nav
   a href=/ Home
   a href=/deskcore DeskCore
+  a href=/tips Tips
+  a href=/contact Contact
   button #menu-btn type=button Menu

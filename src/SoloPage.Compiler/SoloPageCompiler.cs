@@ -16,9 +16,33 @@ public static class SoloPageCompiler
         if (!Directory.Exists(projectDir))
             return SoloPageResult.Fail([$"Project folder not found: {projectDir}"]);
 
+        SiteConfig? siteConfig = null;
+        try
+        {
+            siteConfig = SoloPageData.LoadConfig(projectDir);
+        }
+        catch (Exception ex)
+        {
+            return SoloPageResult.Fail([$"site.json: {ex.Message}"]);
+        }
+
+        if (!string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            siteConfig ??= new SiteConfig();
+            siteConfig.BaseUrl = options.BaseUrl;
+        }
+
         var cssPath = FindFirst(projectDir, options.CssName, "*.solocss");
         var jsPath = FindFirst(projectDir, options.JsName, "*.solojs");
-        var pageFiles = DiscoverPages(projectDir, options);
+        List<PageInput> pageFiles;
+        try
+        {
+            pageFiles = DiscoverPages(projectDir, options, siteConfig);
+        }
+        catch (Exception ex)
+        {
+            return SoloPageResult.Fail([ex.Message]);
+        }
 
         if (pageFiles.Count == 0)
             return SoloPageResult.Fail(["SoloPage needs a .solohtml page (page.solohtml or pages/*.solohtml)."]);
@@ -32,7 +56,6 @@ public static class SoloPageCompiler
             css = cssResult.Css;
         }
 
-        // SoloCSS present → never fight with SoloHTML DefaultCss
         var emitOptions = cssPath is not null || options.IncludeDefaultTheme == false
             ? new SoloHtmlEmitOptions { IncludeDefaultTheme = false }
             : options.IncludeDefaultTheme == true
@@ -50,14 +73,14 @@ public static class SoloPageCompiler
             usesReact = usesReact || jsResult.UsesReact;
         }
 
-        var multi = pageFiles.Count > 1 || options.SiteMode;
-        // Multi-page: shared assets for caching unless forced inline
+        var multi = pageFiles.Count > 1 || options.SiteMode || Directory.Exists(Path.Combine(projectDir, "pages"));
         var inline = options.InlineAssets && !multi;
         if (options.ForceInline)
             inline = true;
 
         var artifacts = new List<SoloPageArtifact>();
         string? primaryHtml = null;
+        var routes = new List<string>();
 
         if (!inline && (css is not null || js is not null))
         {
@@ -69,19 +92,15 @@ public static class SoloPageCompiler
 
         foreach (var page in pageFiles)
         {
-            var htmlResult = SoloHtmlCompiler.Compile(
-                File.ReadAllText(page.SourcePath),
-                options.Title,
-                Path.GetDirectoryName(page.SourcePath),
-                emitOptions);
+            var source = page.SourceText ?? File.ReadAllText(page.SourcePath!);
+            var basePath = page.BasePath ?? Path.GetDirectoryName(page.SourcePath!)!;
+            var htmlResult = SoloHtmlCompiler.Compile(source, options.Title, basePath, emitOptions);
             if (!htmlResult.Ok)
                 return SoloPageResult.Fail(htmlResult.Errors.Select(e => $"SoloHTML ({page.Route}): {e}").ToArray());
 
             string bundled;
             if (inline)
-            {
                 bundled = BundleInline(htmlResult.Html, css, js, usesReact);
-            }
             else
             {
                 var cssHref = css is not null ? AssetHref(page.OutRelativePath, "assets/site.css") : null;
@@ -89,12 +108,30 @@ public static class SoloPageCompiler
                 bundled = BundleLinked(htmlResult.Html, cssHref, jsHref, usesReact);
             }
 
+            // Mark current route for path-aware nav (solo.route.markActive).
+            bundled = InjectBefore(bundled, "</head>",
+                $"<meta name=\"solo:route\" content=\"{page.Route}\" />\n",
+                StringComparison.OrdinalIgnoreCase);
+
             artifacts.Add(new SoloPageArtifact(page.OutRelativePath, bundled));
+            routes.Add(page.Route);
             if (page.Route is "/" or "")
                 primaryHtml = bundled;
         }
 
         primaryHtml ??= artifacts.First(a => a.RelativePath.EndsWith(".html", StringComparison.OrdinalIgnoreCase)).Content;
+
+        var baseUrl = siteConfig?.BaseUrl?.TrimEnd('/');
+        var genRedirects = siteConfig?.GenerateRedirects ?? multi;
+        var genSitemap = (siteConfig?.GenerateSitemap ?? multi) && !string.IsNullOrWhiteSpace(baseUrl);
+        var genRobots = (siteConfig?.GenerateRobots ?? multi) && !string.IsNullOrWhiteSpace(baseUrl);
+
+        if (multi && genRedirects)
+            artifacts.Add(new SoloPageArtifact("_redirects", SoloPageData.BuildRedirects(routes)));
+        if (genSitemap)
+            artifacts.Add(new SoloPageArtifact("sitemap.xml", SoloPageData.BuildSitemap(baseUrl!, routes)));
+        if (genRobots)
+            artifacts.Add(new SoloPageArtifact("robots.txt", SoloPageData.BuildRobots(baseUrl!)));
 
         return new SoloPageResult(
             true,
@@ -105,38 +142,56 @@ public static class SoloPageCompiler
             jsPath,
             usesReact,
             artifacts,
-            multi);
+            multi,
+            routes);
     }
 
-    private static List<PageInput> DiscoverPages(string projectDir, SoloPageOptions options)
+    private static List<PageInput> DiscoverPages(string projectDir, SoloPageOptions options, SiteConfig? siteConfig)
     {
+        var pages = new List<PageInput>();
         var pagesDir = Path.Combine(projectDir, "pages");
         if (Directory.Exists(pagesDir))
         {
-            return Directory.EnumerateFiles(pagesDir, "*.solohtml", SearchOption.TopDirectoryOnly)
-                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
-                .Select(f =>
+            // Nested pages/tips/foo.solohtml → /tips/foo/
+            foreach (var f in Directory.EnumerateFiles(pagesDir, "*.solohtml", SearchOption.AllDirectories)
+                         .OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
+            {
+                var rel = Path.GetRelativePath(pagesDir, f).Replace('\\', '/');
+                var noExt = Path.ChangeExtension(rel, null)!.Replace('\\', '/');
+                string route;
+                string outRel;
+                if (noExt.Equals("index", StringComparison.OrdinalIgnoreCase) ||
+                    noExt.EndsWith("/index", StringComparison.OrdinalIgnoreCase))
                 {
-                    var name = Path.GetFileNameWithoutExtension(f);
-                    var route = name.Equals("index", StringComparison.OrdinalIgnoreCase) ? "/" : "/" + name.ToLowerInvariant();
-                    var outRel = name.Equals("index", StringComparison.OrdinalIgnoreCase)
-                        ? "index.html"
-                        : $"{name.ToLowerInvariant()}/index.html";
-                    return new PageInput(f, route, outRel);
-                })
-                .ToList();
+                    var dir = noExt.Equals("index", StringComparison.OrdinalIgnoreCase)
+                        ? ""
+                        : noExt[..^"/index".Length];
+                    route = string.IsNullOrEmpty(dir) ? "/" : "/" + dir.ToLowerInvariant();
+                    outRel = string.IsNullOrEmpty(dir) ? "index.html" : $"{dir.ToLowerInvariant()}/index.html";
+                }
+                else
+                {
+                    route = "/" + noExt.ToLowerInvariant();
+                    outRel = $"{noExt.ToLowerInvariant()}/index.html";
+                }
+                pages.Add(new PageInput(f, null, route, outRel, Path.GetDirectoryName(f)));
+            }
+        }
+        else
+        {
+            var single = FindFirst(projectDir, options.HtmlName, "*.solohtml");
+            if (single is not null)
+            {
+                var fileName = Path.GetFileName(single);
+                if (!fileName.Equals("layout.solohtml", StringComparison.OrdinalIgnoreCase))
+                    pages.Add(new PageInput(single, null, "/", "index.html", Path.GetDirectoryName(single)));
+            }
         }
 
-        var single = FindFirst(projectDir, options.HtmlName, "*.solohtml");
-        if (single is null)
-            return [];
+        foreach (var gen in SoloPageData.ExpandCollections(projectDir, siteConfig))
+            pages.Add(new PageInput(null, gen.Source, gen.Route, gen.OutRelativePath, gen.BasePath));
 
-        // Ignore layout-only / component-looking names at root
-        var fileName = Path.GetFileName(single);
-        if (fileName.Equals("layout.solohtml", StringComparison.OrdinalIgnoreCase))
-            return [];
-
-        return [new PageInput(single, "/", "index.html")];
+        return pages;
     }
 
     private static string? FindFirst(string dir, string? preferred, string glob)
@@ -201,7 +256,12 @@ public static class SoloPageCompiler
         <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
         """;
 
-    private sealed record PageInput(string SourcePath, string Route, string OutRelativePath);
+    private sealed record PageInput(
+        string? SourcePath,
+        string? SourceText,
+        string Route,
+        string OutRelativePath,
+        string? BasePath);
 }
 
 public sealed class SoloPageOptions
@@ -210,14 +270,12 @@ public sealed class SoloPageOptions
     public string? HtmlName { get; set; } = "page.solohtml";
     public string? CssName { get; set; } = "styles.solocss";
     public string? JsName { get; set; } = "app.solojs";
-    /// <summary>Inline CSS/JS into each HTML (default for single-page).</summary>
     public bool InlineAssets { get; set; } = true;
-    /// <summary>Force inline even in multi-page mode.</summary>
     public bool ForceInline { get; set; }
     public bool UseReact { get; set; }
-    /// <summary>Treat as site even with one page under pages/.</summary>
     public bool SiteMode { get; set; }
     public bool? IncludeDefaultTheme { get; set; }
+    public string? BaseUrl { get; set; }
 }
 
 public sealed record SoloPageArtifact(string RelativePath, string Content);
@@ -231,7 +289,8 @@ public sealed record SoloPageResult(
     string? JsPath = null,
     bool UsesReact = false,
     IReadOnlyList<SoloPageArtifact>? Files = null,
-    bool IsSite = false)
+    bool IsSite = false,
+    IReadOnlyList<string>? Routes = null)
 {
     public static SoloPageResult Fail(IReadOnlyList<string> errors) =>
         new(false, string.Empty, errors);

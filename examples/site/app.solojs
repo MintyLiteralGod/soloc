@@ -1,5 +1,28 @@
 when ready
   solo.route.markActive("nav a")
+
   on click "#menu-btn"
     toggleClass "#site-nav" open
     set "#menu-btn" attr aria-expanded true
+
+  on scroll window
+    if window.scrollY > 24
+      addClass "body" scrolled
+    else
+      removeClass "body" scrolled
+
+  when visible ".tip"
+    addClass ".tip" revealed
+
+  on submit "#contact"
+    preventDefault
+    formData "#contact" into payload
+    set "#form-status" text "Sending…"
+    removeClass "#form-status" hidden
+    // Swap URL for your Google Form formResponse endpoint (often mode=no-cors).
+    fetch "https://example.com/form" method=POST body="form #contact" mode=no-cors
+      set "#form-status" text "Sent — thanks!"
+      addClass "#form-status" ok
+    catch
+      set "#form-status" text "Could not send — try again."
+      addClass "#form-status" error
